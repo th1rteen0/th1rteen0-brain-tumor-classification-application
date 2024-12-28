@@ -5,3 +5,5 @@ __pycache__/
 *.sqlite3
 .idea
 myenv
+db.sqlite3
+media/
