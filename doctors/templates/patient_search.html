@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block content %}
+<div class="container mt-4 mb-4">
+
+    <h1 class="mb-4">All Patients</h1>
+
+    {% if patients %}
+        <ul class="list-group">
+            {% for patient in patients %}
+                <li class="list-group-item d-flex justify-content-between">
+
+                    <!--patient name-->
+                    <div>
+                        <span>{{patient}}</span>
+                    </div>
+
+                    <!--view file button -->
+                    <div class="view-file-button">
+                        <a href="{% url 'patient_file' patient.id %}">
+                            <button type="button" class="btn btn-primary">View File</button>
+                        </a>
+                    </div>
+
+
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>There are no patients in the system at the moment.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

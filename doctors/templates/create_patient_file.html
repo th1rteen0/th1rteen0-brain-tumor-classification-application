@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-4 mb-4">
+
+    <h1 class="mb-4">New Patient File</h1>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <!-- Loop through form fields and apply Bootstrap classes -->
+        {% for field in form %}
+            <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field|add_class:"form-control" }}  <!-- Add Bootstrap 'form-control' class to each input -->
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% if field.name.errors %}
+                    <div class="alert alert-danger">
+                        {{ form.name.errors.0 }}
+                    </div>
+                {% endif %}
+                {% if field.errors %}
+                    <div class="text-danger">
+                        {{ field.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary w-100">Create Patient File</button>
+    </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4 mb-4">
+    <h1 class="mb-4">{{ patient }}'s File </h1>
+
+    <div class="row">
+
+        <!-- Scanning / Most Recent Scan (Image) Space -->
+        <div class="col-sm-5">
+            Scan Image Space
+            <!-- File upload form -->
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <label for="scan_file">Select scan file:</label>
+                <input type="file" name="scan_file" id="scan_file" accept="image/*,application/dicom">
+                <button type="submit">Upload and Predict</button>
+            </form>
+
+            {% if prediction %}
+                <h3>Prediction Result:</h3>
+                <p>{{ prediction }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Patient Notes -->
+        <div class="col-sm-5">
+            Notes Space
+        </div>
+
+        <!-- Patient Information -->
+        <div class="col-sm-2">
+            Info Space
+        </div>
+    </div>
+
+</div>
+{% endblock %}
