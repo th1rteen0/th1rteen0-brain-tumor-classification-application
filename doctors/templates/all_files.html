@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ patient }}'s Scans</h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>File URL</th>
+                <th>Uploaded At</th>
+                <th>Prediction</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in upload_with_presigned_urls %}
+                <tr>
+                    <td>{{ item.upload.file_name }}</td>
+                    {% if item.presigned_url %}
+                        <td><a href="{{ item.presigned_url }}" target="_blank">View Image</a></td>
+                    {% else %}
+                        <td>No URL available</td>
+                    {% endif %}
+                    <td>{{ item.upload.uploaded_at }}</td>
+                    <td>{{ item.upload.prediction.0 }}</td>
+                    <td>
+                        <!-- View Details button -->
+                        <button type="button" class="btn btn-info" onclick="toggleDetails(this)">View Details</button>
+                        <!-- Hidden prediction details -->
+                        <div class="hidden-details" style="display:none;">
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Prediction row that spans the entire table -->
+                <tr class="prediction-row" style="display:none;">
+
+                    <td colspan="1" class="prediction-text">
+                    </td>
+
+                    <td colspan="2" class="prediction-text">
+                        <p class="mb-1">{{ item.upload.prediction.0 }}</p>
+                        <ul>
+                            <li>
+                                Detection Confidence: {{ item.upload.prediction.1 }}
+                            </li>
+                            <li>
+                                No Detection Confidence: {{ item.upload.prediction.2 }}
+                            </li>
+                        </ul>
+                    </td>
+
+                    <td colspan="1" class="prediction-text">
+                        <p class="mb-1">Possible Tumor Types:</p>
+                        <ul>
+                            {% for each in item.formatted_tumor_results %}
+                                <li>{{ each }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+
+                    <td colspan="1" class="prediction-text">
+                    </td>
+
+                </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="5">No files uploaded for this patient.</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+
+    <!-- Back to Patient File -->
+    <a href="{% url 'patient_file' patient.id %}">
+        <button>Back to Patient File</button>
+    </a>
+
+</div>
+
+<script>
+    // Function to toggle visibility of prediction details
+    function toggleDetails(button) {
+        const details = button.closest('td').querySelector('.hidden-details');
+        const predictionRow = button.closest('tr').nextElementSibling;  // Get the next row with the prediction
+
+        // Toggle the visibility of the hidden details
+        if (details.style.display === "none") {
+            details.style.display = "block";
+            button.textContent = "Hide Details";
+        } else {
+            details.style.display = "none";
+            button.textContent = "View Details";
+        }
+
+        // Toggle the visibility of the prediction row
+        if (predictionRow.style.display === "none") {
+            predictionRow.style.display = "table-row";
+        } else {
+            predictionRow.style.display = "none";
+        }
+    }
+</script>
+
+{% endblock %}

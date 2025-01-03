@@ -8,32 +8,259 @@
     <div class="row">
 
         <!-- Scanning / Most Recent Scan (Image) Space -->
-        <div class="col-sm-5">
-            Scan Image Space
-            <!-- File upload form -->
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                <label for="scan_file">Select scan file:</label>
-                <input type="file" name="scan_file" id="scan_file" accept="image/*,application/dicom">
-                <button type="submit">Upload and Predict</button>
-            </form>
+        <div class="col-sm-4 bg-info">
 
-            {% if prediction %}
-                <h3>Prediction Result:</h3>
-                <p>{{ prediction }}</p>
-            {% endif %}
+            <!-- Most Recent Scan-->
+            <div>
+                <h3>Most Recent Scan:</h3>
+                {% if file_url %}
+                    <img class="img-fluid" src="{{ file_url }}" alt='Latest scan'>
+                {% else %}
+                    <p>No recent scan available.</p>
+                {% endif %}
+            </div>
+
+            <!-- File upload form -->
+            <div class="mb-3">
+                <h3>Upload New Scan:</h3>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file" name="scan_file" id="scan_file" accept="image/*,application/dicom">
+                    <button type="submit">Upload and Predict</button>
+                </form>
+            </div>
+
+            <!-- View All Files -->
+            <div>
+                <a href="{% url 'all_files' patient.id %}">
+                    <button>View All Scans</button>
+                </a>
+            </div>
+
         </div>
 
         <!-- Patient Notes -->
-        <div class="col-sm-5">
-            Notes Space
+        <div class="col-sm-5 bg-primary">
+
+            <div class="bg-danger">
+                <h3>Prediction Result:</h3>
+                {% if latest_scan.prediction %}
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <p class="mb-1">{{ latest_scan.prediction.0 }}</p>
+                        <ul>
+                            {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
+                                <li>
+                                    Detection Confidence: {{ latest_scan.prediction.1 }}
+                                </li>
+                                <li>
+                                    No Tumor Confidence: {{ latest_scan.prediction.2 }}
+                                </li>
+                            {% else %}
+                                <li>
+                                    No Tumor Confidence: {{ latest_scan.prediction.1 }}
+                                </li>
+                                <li>
+                                    Tumor Detection Confidence: {{ latest_scan.prediction.2 }}
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div class="col-md-6">
+                        <p class="mb-1">Possible Tumor Types:</p>
+                        {% if formatted_tumor_results  %}
+                            <ul>
+                                {% for each in formatted_tumor_results %}
+                                    <li>{{ each }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% else %}
+                    <p>No Predictions Available</p>
+                {% endif %}
+
+            </div>
+
+            <div class="bg-warning">
+                <h3>Notes</h3>
+                <div id="notes-container"></div>
+                <form id="note-form">
+                    <input type="hidden" id="patient-id" value="{{ patient.id }}">
+                    <div>
+                        <textarea id="note-input" class="form-control" placeholder="Write a note..."></textarea>
+                        <button type="submit" class="btn btn-primary mt-2">Add Note</button>
+                    </div>
+                </form>
+            </div>
+
+
         </div>
 
         <!-- Patient Information -->
-        <div class="col-sm-2">
-            Info Space
+        <div class="col-sm-3 bg-success">
+            <h3>Patient Information</h3>
+                <ul>
+                    <li>
+                        <p>Name: {{ patient.get_full_name }}</p>
+                    </li>
+                    <li>
+                        <p>Email: <a href="mailto:{{ patient.email }}">{{ patient.email }}</a></p>
+                    </li>
+                    <li>
+                        <p>Phone Number: {{ patient.phone_number }}</p>
+                    </li>
+                    <li>
+                        <p>Address: {{patient.address }}</p>
+                    </li>
+            </ul>
         </div>
     </div>
 
+    <!-- Back to Patient Search -->
+    <a href="{% url 'patient_search' %}">
+        <button>Back to Patient Search</button>
+    </a>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const notesContainer = document.getElementById('notes-container');
+    const noteForm = document.getElementById('note-form');
+    const noteInput = document.getElementById('note-input');
+    const patientId = document.getElementById('patient-id').value; // Assuming patient ID is stored in a hidden input field.
+
+    const notesApiUrl = `/patient-file/${patientId}/notes/`;
+
+    // Fetch and display notes
+    function fetchNotes() {
+        fetch(notesApiUrl)
+            .then(response => response.json())
+            .then(data => {
+                notesContainer.innerHTML = '';
+                data.notes.forEach(note => {
+                    const noteElement = createNoteElement(note);
+                    notesContainer.appendChild(noteElement);
+                });
+            })
+            .catch(error => console.error('Error fetching notes:', error));
+    }
+
+    // Create a note element
+    function createNoteElement(note) {
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note';
+        noteDiv.dataset.noteId = note.id;
+
+        const content = document.createElement('p');
+        content.textContent = note.content;
+
+        const actions = document.createElement('div');
+        actions.className = 'note-actions';
+
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.className = 'btn btn-primary btn-sm';
+        editButton.addEventListener('click', () => editNote(note.id, note.content));
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.className = 'btn btn-danger btn-sm';
+        deleteButton.addEventListener('click', () => deleteNote(note.id));
+
+        actions.appendChild(editButton);
+        actions.appendChild(deleteButton);
+        noteDiv.appendChild(content);
+        noteDiv.appendChild(actions);
+
+        return noteDiv;
+    }
+
+    // Add a new note
+    noteForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const content = noteInput.value.trim();
+        if (!content) {
+            alert('Note content cannot be empty.');
+            return;
+        }
+
+        fetch(notesApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content }),
+        })
+            .then(response => response.json())
+            .then(note => {
+                const noteElement = createNoteElement(note);
+                notesContainer.appendChild(noteElement);
+                noteInput.value = '';
+            })
+            .catch(error => console.error('Error adding note:', error));
+    });
+
+    // Edit a note
+    function editNote(noteId, oldContent) {
+        const newContent = prompt('Edit your note:', oldContent);
+        if (newContent === null || newContent.trim() === '') {
+            return; // User cancelled or entered an empty value
+        }
+
+        fetch(notesApiUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: noteId, content: newContent }),
+        })
+            .then(response => response.json())
+            .then(updatedNote => {
+                const noteElement = notesContainer.querySelector(`[data-note-id='${updatedNote.id}']`);
+                if (noteElement) {
+                    noteElement.querySelector('p').textContent = updatedNote.content;
+                }
+            })
+            .catch(error => console.error('Error updating note:', error));
+    }
+
+    // Delete a note
+    function deleteNote(noteId) {
+        if (!confirm('Are you sure you want to delete this note?')) {
+            return;
+        }
+
+        fetch(notesApiUrl, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: noteId }),
+        })
+            .then(response => response.json())
+            .then(() => {
+                const noteElement = notesContainer.querySelector(`[data-note-id='${noteId}']`);
+                if (noteElement) {
+                    notesContainer.removeChild(noteElement);
+                }
+            })
+            .catch(error => console.error('Error deleting note:', error));
+    }
+
+    // Fetch notes on page load
+    fetchNotes();
+});
+
+
+</script>
+
 {% endblock %}
+

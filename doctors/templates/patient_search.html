@@ -7,6 +7,14 @@
 
     <h1 class="mb-4">All Patients</h1>
 
+    <!-- Search Bar -->
+    <form method="get" action="{% url 'patient_search' %}" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" placeholder="Search patients by first, last, or full name..." value="{{ search_query }}" class="form-control">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
     {% if patients %}
         <ul class="list-group">
             {% for patient in patients %}

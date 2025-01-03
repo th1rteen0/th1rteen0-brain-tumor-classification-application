@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.timezone import now
 from django.contrib.auth.models import User
@@ -21,11 +22,16 @@ class Patient(models.Model):
 
 
 class Upload(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='uploads')
     file_name = models.CharField(max_length=100)
+    # delete file and migrate
     file = models.FileField(upload_to='uploads/')
     uploaded_at = models.DateTimeField(default=now)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='uploads')
-    # related_name='images' allows you to access a patient's images with patient.uploads.all()
+    # related_name='uploads' allows access to a patient's scans with patient.uploads.all()
+    file_url = models.URLField(default='http://example.com/')
+    # prediction = models.CharField(max_length=255, null=True, blank=True)
+    prediction = ArrayField(models.CharField(max_length=200), blank=True)
+    # stored as [result, result_confidence, other_confidence, tumor_results]
 
     class Meta:
         constraints = [
@@ -34,3 +40,14 @@ class Upload(models.Model):
 
     def __str__(self):
         return f"{self.file.name} for {self.patient.get_full_name()}"
+
+
+class Note(models.Model):
+    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='notes')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.content[:50]
+

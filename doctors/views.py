@@ -1,7 +1,8 @@
+import mimetypes
 import os
 from django.shortcuts import get_object_or_404, render, redirect
 import boto3
-from .models import Patient, Upload
+from .models import Patient, Upload, Note
 from .forms import PatientUploadForm, UploadForm
 from tensorflow.keras.models import load_model
 import cv2
@@ -10,6 +11,12 @@ from PIL import Image
 import tempfile
 from mysite.settings import AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME
 from django.core.files.storage import FileSystemStorage
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+import ast
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 
 
 binary_model = load_model('models/binary_model.keras')
@@ -21,7 +28,6 @@ def dashboard(request):
 
 
 def new_scan(request):
-    prediction = None
     patients = Patient.objects.all()
 
     if request.method == 'POST' and request.FILES.get('scanned_file'):
@@ -39,12 +45,22 @@ def new_scan(request):
         scanned_file_url = fs.url(filename)  # URL to access the uploaded file
 
         # Get the prediction for the scan file using the helper function
-        prediction = get_prediction_for_scan(scanned_file)
+        result, result_confidence, other_confidence, tumor_results = get_prediction_for_scan(scanned_file)
 
-        return render(request, 'new_scan.html', {'prediction': prediction, 'scanned_file_url': scanned_file_url,
-                                                 'filename': filename, 'patients': patients})
+        content = {
+            'scanned_file_url': scanned_file_url,
+            'filename': filename,
+            'patients': patients,
+            'result': result,
+            'result_confidence': result_confidence,
+            'other_confidence': other_confidence,
+            'tumor_results': tumor_results,
+        }
+
+        return render(request, 'new_scan.html', content)
 
     if request.method == 'POST' and request.POST.get('assign_scan'):
+        assign_scan = request.POST.get('assign_scan')
         # Get the patient ID and the filename
         patient_id = request.POST.get('patient_id')
         filename = request.POST.get('filename')
@@ -60,11 +76,20 @@ def new_scan(request):
             temp_file_path = fs.path(filename)  # Get the temporary file path
             s3.upload_file(temp_file_path, AWS_STORAGE_BUCKET_NAME, file_path)
 
-            # # URL to the uploaded file
-            # scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
+            # URL to the uploaded file
+            scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
+
+            # Get existing prediction details (stored in POST data)
+            result = request.POST.get('result')
+            result_confidence = request.POST.get('result_confidence')
+            other_confidence = request.POST.get('other_confidence')
+            tumor_results = request.POST.getlist('tumor_results')
+
+            # Create prediction array
+            prediction = [result, result_confidence, other_confidence, tumor_results]
 
             # Save the scan metadata to the database
-            Upload.objects.create(patient=patient, file_name=filename, prediction=prediction)
+            Upload.objects.create(patient=patient, file_name=filename, file_url=scanned_file_url, prediction=prediction)
 
             return redirect('new_scan')
 
@@ -75,20 +100,23 @@ def new_scan(request):
 
 
 def get_prediction_for_scan(scan_file):
-    prediction = None
+    result = None
+    result_confidence = None
+    other_confidence = None
+    tumor_results = None
 
     if scan_file:
-        prediction = process_scan(scan_file)
+        result, result_confidence, other_confidence, tumor_results = process_scan(scan_file)
 
-    return prediction
+    return result, result_confidence, other_confidence, tumor_results
 
 
 def process_scan(scan_file):
     # Convert uploaded file to a PIL image
     image = Image.open(scan_file)
     # Run tumor detection and classification
-    result = detect_tumor(image)
-    return result
+    result, result_confidence, other_confidence, tumor_results = detect_tumor(image)
+    return result, result_confidence, other_confidence, tumor_results
 
 
 def detect_tumor(image):
@@ -98,31 +126,42 @@ def detect_tumor(image):
         # If tumor is detected, run through the second model for tumor classification
         tumor_type, tumor_type_confidence = classify_tumor_type(image)
 
-        # Format the results for tumor detection and type
-        result = "Results: Brain Tumor Detected"
-        result += f"\nBrain Tumor Detected with {tumor_confidence * 100:.2f}% confidence"
-        result += f"\nNo Brain Tumor Detected with {no_tumor_confidence * 100:.2f}% confidence"
-        result += f"\nTumor Type: {tumor_type} with {tumor_type_confidence * 100:.2f}% confidence"
+        # Create a list to hold the tumor type results and confidence levels
+        tumor_results = [{
+            'type': tumor_type,
+            'confidence': f"{tumor_type_confidence * 100:.2f}%",
+        }]
 
-        # Display the tumor types with confidence levels
+        # Display the other tumor types with their confidence levels
         tumor_types = ["Glioma", "Meningioma", "Pituitary"]
         for i, t in enumerate(tumor_types):
             if t != tumor_type:
-                result += f"\n\tOther Tumor Type: {t} with {tumor_model.predict(preprocess_image(image))[0][i] * 100:.2f}% confidence"
+                other_tumor_confidence = tumor_model.predict(preprocess_image(image))[0][i] * 100
+                tumor_results.append({
+                    'type': t,
+                    'confidence': f"{other_tumor_confidence:.2f}%",
+                })
+
+        result = "Brain Tumor Detected"
+        result_confidence = f"{tumor_confidence * 100:.2f}%"
+        other_confidence = f"{no_tumor_confidence * 100:.2f}%"
 
     else:
         # If no tumor is detected, display the result and the possible tumor types
-        result = "Results: No Brain Tumor Detected"
-        result += f"\nNo Brain Tumor Detected with {no_tumor_confidence * 100:.2f}% confidence"
-        result += f"\nBrain Tumor Detected with {tumor_confidence * 100:.2f}% confidence"
+        result = "No Brain Tumor Detected"
+        result_confidence = f"{no_tumor_confidence * 100:.2f}%"
+        other_confidence = f"{tumor_confidence * 100:.2f}%"
 
         # Display the confidence for possible tumor types (in case it wasn't detected as a tumor)
         tumor_types = ["Glioma", "Meningioma", "Pituitary"]
         tumor_predictions = tumor_model.predict(preprocess_image(image))[0]
-        for i, t in enumerate(tumor_types):
-            result += f"\n\tPossible Tumor Type: {t} with {tumor_predictions[i] * 100:.2f}% confidence"
 
-    return result
+        tumor_results = [{
+            'type': t,
+            'confidence': f"{tumor_predictions[i] * 100:.2f}%",
+        } for i, t in enumerate(tumor_types)]
+
+    return result, result_confidence, other_confidence, tumor_results
 
 
 # Function to predict if there is a brain tumor
@@ -228,18 +267,193 @@ def create_patient_file(request):
 
 
 def patient_search(request):
-    patients = Patient.objects.all()
-    return render(request, 'patient_search.html', {'patients': patients})
+    patients = Patient.objects.annotate(
+        full_name=Concat('first_name', Value(' '), 'last_name')  # Create a full_name field
+    )
+
+    # apply search filter
+    search_query = request.GET.get('q', '')
+    if search_query:
+        patients = patients.filter(
+            Q(full_name__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+
+    return render(request, 'patient_search.html', {'patients': patients, 'search_query': search_query})
 
 
 def patient_file(request, patient_id):
-    prediction = None
     patient = get_object_or_404(Patient, id=patient_id)
+    prediction = None
+    file_url = None
+    formatted_tumor_results = None
 
+    try:
+        # Attempt to get the most recent scan
+        latest_scan = Upload.objects.filter(patient=patient).latest('uploaded_at')
+        formatted_tumor_results = format_prediction(latest_scan)
+    except Upload.DoesNotExist:
+        latest_scan = None
+        formatted_tumor_results = None
+
+    if latest_scan:
+        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+        bucket_name = AWS_STORAGE_BUCKET_NAME
+
+        # Determine the S3 file key from the file_obj's path
+        file_key = f'patient_{patient_id}/{latest_scan.file_name}'
+
+        file_url = s3.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': bucket_name,
+                'Key': file_key,
+                # makes sure the browser is able to handle the display the correct media type
+                'ResponseContentType': 'image/jpeg',
+                'ResponseContentDisposition': 'inline',
+            },
+            ExpiresIn=3600  # URL expires in 1 hour
+        )
+
+    # Handle file upload and prediction
     if request.method == 'POST' and request.FILES.get('scan_file'):
         scan_file = request.FILES['scan_file']
+        fs = FileSystemStorage()
+        filename = fs.save(scan_file.name, scan_file)
 
-        prediction = get_prediction_for_scan(scan_file)
+        # Get prediction for the new scan
+        result, result_confidence, other_confidence, tumor_results = get_prediction_for_scan(scan_file)
 
-    return render(request, 'patient_file.html', {'patient': patient, 'prediction': prediction})
+        # Upload to S3
+        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+        file_path = f'patient_{patient_id}/{filename}'
 
+        try:
+            temp_file_path = fs.path(filename)
+            s3.upload_file(temp_file_path, AWS_STORAGE_BUCKET_NAME, file_path)
+            scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
+
+            prediction = [result, result_confidence, other_confidence, tumor_results]
+
+            latest_scan = Upload.objects.create(patient=patient, file_name=filename, file_url=scanned_file_url, prediction=prediction)
+
+            # Generate a new presigned URL for the latest scan
+            file_url = s3.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': AWS_STORAGE_BUCKET_NAME,
+                    'Key': file_path,
+                    'ResponseContentType': 'image/jpeg',
+                    'ResponseContentDisposition': 'inline',
+                },
+                ExpiresIn=3600
+            )
+
+        except Exception as e:
+            print(f"Error uploading to S3: {e}")
+
+    context = {
+        'patient': patient,
+        'latest_scan': latest_scan,
+        'file_url': file_url,
+        'formatted_tumor_results': formatted_tumor_results
+    }
+
+    return render(request, 'patient_file.html', context)
+
+
+def format_prediction(latest_scan):
+    tumor_results = latest_scan.prediction[3]
+    tumor_results = ast.literal_eval(tumor_results)
+
+    final_list = []
+
+    for parsed in tumor_results:
+        new_parsed = ast.literal_eval(parsed)
+        for each in new_parsed:
+            result_list = []
+            for values in each.values():
+                result_list.append(values)
+            results = result_list[0] + ": " + result_list[1]
+            final_list.append(results)
+
+    return final_list
+
+
+@csrf_exempt
+def manage_notes(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    if request.method == 'GET':
+        notes = list(Note.objects.filter(patient=patient).values())
+        return JsonResponse({'notes': notes})
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        content = data.get('content', '')
+        if content.strip():
+            note = Note.objects.create(patient=patient, content=content)
+            return JsonResponse({'id': note.id, 'content': note.content, 'created_at': note.created_at})
+        return JsonResponse({'error': 'Content cannot be empty'}, status=400)
+
+    if request.method == 'DELETE':
+        data = json.loads(request.body)
+        note_id = data.get('id')
+        note = get_object_or_404(Note, id=note_id, patient=patient)
+        note.delete()
+        return JsonResponse({'message': 'Note deleted'})
+
+    if request.method == 'PUT':
+        data = json.loads(request.body)
+        note_id = data.get('id')
+        content = data.get('content', '')
+        note = get_object_or_404(Note, id=note_id, patient=patient)
+        if content.strip():
+            note.content = content
+            note.save()
+            return JsonResponse({'id': note.id, 'content': note.content, 'updated_at': note.updated_at})
+        return JsonResponse({'error': 'Content cannot be empty'}, status=400)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+def all_files(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    uploads = patient.uploads.all()
+
+    s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+    bucket_name = AWS_STORAGE_BUCKET_NAME
+
+    upload_with_presigned_urls = []
+
+    for upload in uploads:
+        file_key = f'patient_{patient_id}/{upload.file_name}'
+        try:
+            # Generate a presigned URL for each file
+            file_url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name,
+                        'Key': file_key,
+                        'ResponseContentType': 'image/jpeg',
+                        'ResponseContentDisposition': 'inline',
+                        },
+                ExpiresIn=3600  # URL expires in 1 hour
+            )
+            formatted_tumor_results = format_prediction(upload)
+
+            upload_with_presigned_urls.append({
+                'upload': upload,
+                'presigned_url': file_url,
+                'formatted_tumor_results': formatted_tumor_results
+            })
+
+        except Exception as e:
+            print(f"Error generating presigned URL for file {upload.file_name}: {e}")
+            upload_with_presigned_urls.append({
+                'upload': upload,
+                'signed_url': None,
+                'formatted_tumor_results': None
+            })
+
+    return render(request, 'all_files.html', {'upload_with_presigned_urls': upload_with_presigned_urls, 'patient': patient})
