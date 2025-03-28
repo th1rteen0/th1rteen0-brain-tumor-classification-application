@@ -1,10 +1,13 @@
 import mimetypes
 import os
+import tensorflow as tf
+from tensorflow import keras
 from django.shortcuts import get_object_or_404, render, redirect
 import boto3
 from .models import Patient, Upload, Note
 from .forms import PatientUploadForm, UploadForm
-from tensorflow.keras.models import load_model
+import keras.models
+from keras.models import load_model
 import cv2
 import numpy as np
 from PIL import Image
@@ -363,6 +366,24 @@ def patient_file(request, patient_id):
     return render(request, 'patient_file.html', context)
 
 
+def proxy_patient_image(request, patient_id, file_name):
+    file_key = f'patient_{patient_id}/{file_name}'
+
+    s3 = boto3.client('s3', region_name=settings.AWS_S3_REGION_NAME)
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+    try:
+        # Generate a presigned URL for the file
+        file_url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': file_key},
+            ExpiresIn=3600  # URL expires in 1 hour
+        )
+        return HttpResponseRedirect(file_url)  # Redirect to the presigned URL
+    except Exception as e:
+        return HttpResponseForbidden("Unable to access the requested file.")
+
+
 def format_prediction(latest_scan):
     tumor_results = latest_scan.prediction[3]
     tumor_results = ast.literal_eval(tumor_results)
@@ -457,3 +478,24 @@ def all_files(request, patient_id):
             })
 
     return render(request, 'all_files.html', {'upload_with_presigned_urls': upload_with_presigned_urls, 'patient': patient})
+
+def delete_patient(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+    bucket_name = AWS_STORAGE_BUCKET_NAME
+
+    file_key = f'patient_{patient_id}'
+
+    try:
+        patient_to_delete = s3.list_objects_v2(Bucket=bucket_name, Prefix=file_key)
+        if 'Contents' in patient_to_delete:
+            delete_keys = [{'Key': obj['Key']} for obj in patient_to_delete['Contents']]
+
+            s3.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_keys})
+
+        patient.delete()
+    except Exception as e:
+        print(f"Error deleting patient file from S3: {e}")
+
+    return redirect('patient_search')
