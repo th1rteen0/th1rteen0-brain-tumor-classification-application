@@ -1,0 +1,99 @@
+{% load static %}
+
+{% block content %}
+<!--<div class="note-container card p-3">-->
+    <div id="note-section" class="note-section">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3>Notes</h3>
+        </div>
+
+        <div id="notes-content">
+            <!-- Display Notes -->
+            <div id="notes-container" class="notes-container">
+                {% for note in notes %}
+                    <div id="note-{{ note.id }}" class="card mb-3">
+                        <!-- Note Body -->
+                        <div class="card-body">
+                            <p class="card-text">{{ note.content }}</p>
+                        </div>
+                        <!-- Note Footer -->
+                        <div class="card-footer text-bg-white-50 d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted mb-0">Posted by:</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ note.created_at|date:"F j, Y, g:i a" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">No notes available for this patient's file.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!--Add Note Form-->
+        <div id="add-note-form-section" class="mt-4">
+            <h5>Add a New Note</h5>
+            <form id="add-note-form" method="post" action="{% url 'patient_file' patient.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="add-note" value="1">
+                <textarea name="content" class="form-control mb-2" placeholder="Write a note..."></textarea>
+                <button type="submit" name="add_note" class="btn btn-primary mt-2">Add Note</button>
+            </form>
+        </div>
+    </div>
+<!--</div>-->
+
+<script>
+    $(document).ready(function() {
+        console.log("JavaScript is working on this page");
+
+    // Handle Add Note Form Submission
+    $(document).on('submit', '#add-note-form', function(e) {
+        e.preventDefault(); // Prevents the form from submitting the default way (reloading the page)
+        console.log('Add Note form intercepted by AJAX'); // Debugging log
+
+        const form = $(this); // Selects the submitted form
+        $.ajax({
+            type: form.attr('method'),  // Uses the method (e.g., POST) specified in the form
+            url: form.attr('action'),   // Sends request to the action URL in the form
+            data: form.serialize(),     // Converts form data into a format suitable for AJAX submission
+            success: function(response) {
+                $('#notes-section').html(response.html); // Updates the notes section with the new HTML
+                form[0].reset(); // Clears the form fields after successful submission
+            },
+            error: function(xhr) {
+                console.error('Error submitting prompt:', xhr);
+                alert('There was an error submitting the note. Please try again.');
+            }
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^GET|HEAD|OPTIONS|TRACE$/i.test(settings.type)) && !this.crossDomain) {
+                xhr.setRequestHeader('X-CSRFToken', csrftoken);
+            }
+        }
+    });
+</script>
+
+{% endblock %}
+

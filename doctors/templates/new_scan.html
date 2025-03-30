@@ -4,75 +4,115 @@
 {% block content %}
 <div class="container mt-4 mb-4">
 
-    <h1 class="mb-4">Upload New Scan for Tumor Prediction</h1>
+    <h2 class="mb-4">Upload New Scan for Tumor Prediction</h2>
 
-    <div class="row justify-content-around">
+    <div class="row bg-light p-4 justify-content-around rounded shadow-sm">
 
         <!-- Upload Section -->
-        <div class="col-sm-5">
-            <!-- File upload form -->
-            <h2 class="mb-3">Choose Image to Scan:</h2>
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                <label for="scanned_file">Select file to scan:</label>
-                <input type="file" name="scanned_file" id="scanned_file" accept="image/*,application/dicom">
-                <button type="submit">Upload and Predict</button>
-            </form>
+        <div class="col-sm-5 d-flex flex-column align-items-center">
 
+            <div id="upload-section-title">
+                {% if scanned_file_url %}
+                    <h3 class="mb-3">Image Scanned:</h3>
+                {% else %}
+                    <h3 class="mb-3">Choose Image to Scan:</h3>
+                {% endif %}
+            </div>
+
+            <!-- Display the Uploaded Scan -->
             {% if scanned_file_url %}
-                <h4>Uploaded Scan:</h4>
-                <img src="{{ scanned_file_url }}" alt="Uploaded Scan" style="max-width: 100%; height: auto;">
+                <div id="upload-section-image" class="d-flex align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
+                    <img src="{{ scanned_file_url }}" alt="Uploaded Scan" class="img-fluid rounded shadow-sm" style="max-width: 450px; max-height: 350px;">
+                </div>
             {% endif %}
 
+            <!-- File Upload Form -->
+            {% if scanned_file_url %}
+                <h3 id="upload-section-form">Upload & Scan Another Image:</h3>
+            {% endif %}
+                <form method="POST" enctype="multipart/form-data" class="w-100 px-3">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                        <label for="scanned_file" class="form-label fw-bold">Select file:</label>
+                        <input type="file" class="form-control" name="scanned_file" id="scanned_file" accept="image/*,application/dicom">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-block">Upload and Predict</button>
+                    </div>
+                </form>
         </div>
 
-        <!-- Prediction and Assignment Section -->
-        <div class="col-sm-5">
-            <h2 class="mb-3">Predictions:</h2>
+        <!-- Results (Prediction and Assignment) Section -->
+        <div class="col-sm-5 d-flex flex-column align-items-center">
+
+            <div id="result-section-title">
+                <h3 class="mb-3">Prediction:</h3>
+            </div>
 
             <!-- Results -->
             {% if result %}
-                <h4>{{ result }}</h4>
-                <ul>
-                    {% if result == "Brain Tumor Detected" %}
-                    <li>
-                        Detection Confidence: {{ result_confidence }}
-                    </li>
-                    <li>
-                        No Detection Confidence: {{ other_confidence }}
-                    </li>
-                    {% else %}
-                    <li>
-                        No Detection Confidence: {{ result_confidence }}
-                    </li>
-                    <li>
-                        Detection Confidence: {{ other_confidence }}
-                    </li>
-                    {% endif %}
-                </ul>
+                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
+                    <h4 class="text-primary">{{ result }}</h4>
+                    <ul class="list-unstyled">
+                        {% if result == "Brain Tumor Detected" %}
+                            <li>
+                                <strong>Tumor Detection Confidence: {{ result_confidence }}</strong>
+                            </li>
+                            <li>
+                                Tumor Absence Confidence: {{ other_confidence }}
+                            </li>
+                        {% else %}
+                            <li>
+                                <strong>Tumor Absence Confidence: {{ result_confidence }}</strong>
+                            </li>
+                            <li>
+                                Tumor Detection Confidence: {{ other_confidence }}
+                            </li>
+                        {% endif %}
+                    </ul>
 
-                {% if tumor_results %}
-                    {% if result == "Brain Tumor Detected" %}
-                        <h4>Possible Tumor Types:</h4>
-                        <ul>
-                            {% for tumor in tumor_results %}
-                                <li>{{ tumor.type }}: {{ tumor.confidence }}</li>
-                            {% endfor %}
-                        </ul>
-                    <!-- No Brain Tumor Detected -->
-                    {% else %}
-                        <h4>Possible Tumor Types Based on Detection Confidence of {{ other_confidence }}:</h4>
-                        <ul>
-                            {% for tumor in tumor_results %}
-                                <li>{{ tumor.type }}: {{ tumor.confidence }}</li>
-                            {% endfor %}
-                        </ul>
+                    {% if tumor_results %}
+                        {% if result == "Brain Tumor Detected" %}
+                            <h4 class="mt-3">Possible Tumor Types:</h4>
+                            <ul class="list-unstyled">
+                                {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
+                                    {% for tumor in tumor_results %}
+                                        <li>
+                                            {% if tumor == highest_confidence %}
+                                                <strong>{{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span></strong>
+                                            {% else %}
+                                                {{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                {% endwith %}
+                            </ul>
+                        {% else %}
+                            <h4 class="mt-3 text-center">Potential Tumor Types Based on the Detection Confidence of {{ other_confidence }}:</h4>
+                            <ul class="list-unstyled">
+                                {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
+                                    {% for tumor in tumor_results %}
+                                        <li>
+                                            {% if tumor == highest_confidence %}
+                                                <strong>{{ tumor.type }}: <span class="text-secondary">{{ tumor.confidence }}</span></strong>
+                                            {% else %}
+                                                {{ tumor.type }}: <span class="text-secondary">{{ tumor.confidence }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                {% endwith %}
+                            </ul>
+                        {% endif %}
                     {% endif %}
-                {% endif %}
+                </div>
+            {% else %}
+                <p>There are no predictions to display.</p>
+            {% endif %}
 
-                <!-- Assignment -->
-                <h4>Assign Scan to Patient</h4>
-                <form method="post">
+            <!-- Assignment Form -->
+            {% if result %}
+                <h3>Assign Scan to Patient:</h3>
+                <form id="result-assignment-form" method="post" class="w-100 px-3">
                     {% csrf_token %}
                     <input type="hidden" name="filename" value="{{ filename }}">
                     <input type="hidden" name="result" value="{{ result }}">
@@ -80,15 +120,19 @@
                     <input type="hidden" name="other_confidence" value="{{ other_confidence }}">
                     <input type="hidden" name="tumor_results" value="{{ tumor_results }}">
 
-                    <label for="patient_id">Select Patient:</label>
-                    <select name="patient_id" id="patient-dropdown" required>
-                        {% for patient in patients %}
-                            <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" name="assign_scan" value="true">Assign Scan</button>
-                </form>
+                    <div class="form-group mb-3">
+                        <label for="patient_id" class="form-label fw-bold">Select patient:</label>
+                        <select name="patient_id" id="patient-dropdown" class="form-select" required>
+                            {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
+                    <div class="d-grid">
+                        <button type="submit" name="assign_scan" value="true" class="btn btn-primary btn-block">Assign Scan</button>
+                    </div>
+                </form>
             {% endif %}
         </div>
 

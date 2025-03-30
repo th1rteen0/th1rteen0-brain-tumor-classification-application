@@ -12,6 +12,8 @@ urlpatterns = [
     path('patient-file/<int:patient_id>/', views.patient_file, name='patient_file'),
     path('patient-file/<int:patient_id>/notes/', views.manage_notes, name='manage_notes'),
     path('patient-file/<int:patient_id>/all-files', views.all_files, name='all_files'),
+    path('patient-file/<int:patient_id>/delete/', views.delete_patient, name='delete_patient'),
+    path('patient/<int:patient_id>/secure-image/<str:file_name>/', views.secure_patient_image, name='secure_patient_image'),
 ]
 
 # Serve media files in development

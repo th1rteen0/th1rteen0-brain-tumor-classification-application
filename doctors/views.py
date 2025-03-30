@@ -1,10 +1,13 @@
 import mimetypes
 import os
+import tensorflow as tf
+from tensorflow import keras
 from django.shortcuts import get_object_or_404, render, redirect
 import boto3
 from .models import Patient, Upload, Note
-from .forms import PatientUploadForm, UploadForm
-from tensorflow.keras.models import load_model
+from .forms import PatientUploadForm, UploadForm, NoteForm
+import keras.models
+from keras.models import load_model
 import cv2
 import numpy as np
 from PIL import Image
@@ -17,6 +20,13 @@ import json
 import ast
 from django.db.models import Q, Value
 from django.db.models.functions import Concat
+import mimetypes
+from django.http import FileResponse, HttpResponseForbidden
+from django.conf import settings
+from botocore.exceptions import BotoCoreError, ClientError
+import io
+from django.urls import reverse
+from django.template.loader import render_to_string
 
 
 binary_model = load_model('models/binary_model.keras')
@@ -295,72 +305,117 @@ def patient_file(request, patient_id):
         formatted_tumor_results = format_prediction(latest_scan)
     except Upload.DoesNotExist:
         latest_scan = None
-        formatted_tumor_results = None
 
-    if latest_scan:
-        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-        bucket_name = AWS_STORAGE_BUCKET_NAME
-
-        # Determine the S3 file key from the file_obj's path
-        file_key = f'patient_{patient_id}/{latest_scan.file_name}'
-
-        file_url = s3.generate_presigned_url(
-            'get_object',
-            Params={
-                'Bucket': bucket_name,
-                'Key': file_key,
-                # makes sure the browser is able to handle the display the correct media type
-                'ResponseContentType': 'image/jpeg',
-                'ResponseContentDisposition': 'inline',
-            },
-            ExpiresIn=3600  # URL expires in 1 hour
-        )
+    # if latest_scan:
+    #     s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+    #     bucket_name = AWS_STORAGE_BUCKET_NAME
+    #
+    #     # Determine the S3 file key from the file_obj's path
+    #     file_key = f'patient_{patient_id}/{latest_scan.file_name}'
+    #
+    #     file_url = s3.generate_presigned_url(
+    #         'get_object',
+    #         Params={
+    #             'Bucket': bucket_name,
+    #             'Key': file_key,
+    #             # makes sure the browser is able to handle the display the correct media type
+    #             'ResponseContentType': 'image/jpeg',
+    #             'ResponseContentDisposition': 'inline',
+    #         },
+    #         ExpiresIn=3600  # URL expires in 1 hour
+    #
 
     # Handle file upload and prediction
-    if request.method == 'POST' and request.FILES.get('scan_file'):
-        scan_file = request.FILES['scan_file']
-        fs = FileSystemStorage()
-        filename = fs.save(scan_file.name, scan_file)
+    # if request.method == 'POST' and request.FILES.get('scan_file'):
+    #     scan_file = request.FILES['scan_file']
+    #     fs = FileSystemStorage()
+    #     filename = fs.save(scan_file.name, scan_file)
+    #
+    #     # Get prediction for the new scan
+    #     result, result_confidence, other_confidence, tumor_results = get_prediction_for_scan(scan_file)
+    #
+    #     # Upload to S3
+    #     s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+    #     file_path = f'patient_{patient_id}/{filename}'
+    #
+    #     try:
+    #         temp_file_path = fs.path(filename)
+    #         s3.upload_file(temp_file_path, AWS_STORAGE_BUCKET_NAME, file_path)
+    #         scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
+    #
+    #         prediction = [result, result_confidence, other_confidence, tumor_results]
+    #
+    #         latest_scan = Upload.objects.create(patient=patient, file_name=filename, file_url=scanned_file_url,
+    #                                             prediction=prediction)
+    #
+    #     except Exception as e:
+    #         print(f"Error uploading to S3: {e}")
+    #         file_url = None  # Ensure file_url is None if upload fails
 
-        # Get prediction for the new scan
-        result, result_confidence, other_confidence, tumor_results = get_prediction_for_scan(scan_file)
+    # Retrieve All Notes
+    notes = patient.notes.all()  # Retrieve all prompts related to this upload
 
-        # Upload to S3
-        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-        file_path = f'patient_{patient_id}/{filename}'
+    # Handle note form submission
+    if request.method == 'POST' and 'add_note' in request.POST:
+        note_form = NoteForm(request.POST)
+        if note_form.is_valid():
+            new_note = note_form.save(commit=False)
+            new_note.patient = patient
+            # new_note.created_by = request.user
+            new_note.save()
 
-        try:
-            temp_file_path = fs.path(filename)
-            s3.upload_file(temp_file_path, AWS_STORAGE_BUCKET_NAME, file_path)
-            scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # Re-fetch notes to include the new one
+                notes = patient.notes.all()
 
-            prediction = [result, result_confidence, other_confidence, tumor_results]
+                # Render the partial template
+                notes_html = render_to_string('partials/notes_partial.html', {
+                    'notes': notes,
+                    'note_form': NoteForm(),
+                    'patient': patient,
+                }, request=request)
 
-            latest_scan = Upload.objects.create(patient=patient, file_name=filename, file_url=scanned_file_url, prediction=prediction)
+                return JsonResponse({'html': notes_html})
 
-            # Generate a new presigned URL for the latest scan
-            file_url = s3.generate_presigned_url(
-                'get_object',
-                Params={
-                    'Bucket': AWS_STORAGE_BUCKET_NAME,
-                    'Key': file_path,
-                    'ResponseContentType': 'image/jpeg',
-                    'ResponseContentDisposition': 'inline',
-                },
-                ExpiresIn=3600
-            )
-
-        except Exception as e:
-            print(f"Error uploading to S3: {e}")
+            return redirect('patient_file', patient_id=patient.id)
+    else:
+        note_form = NoteForm()
 
     context = {
         'patient': patient,
         'latest_scan': latest_scan,
-        'file_url': file_url,
-        'formatted_tumor_results': formatted_tumor_results
+        # 'file_url': file_url if file_url else None,
+        'formatted_tumor_results': formatted_tumor_results,
+        'note_form': note_form,
+        'notes': notes,
     }
 
     return render(request, 'patient_file.html', context)
+
+
+def secure_patient_image(request, patient_id, file_name):
+    """ Fetches and streams the file from S3 to the user without exposing the S3 URL. """
+
+    file_key = f'patient_{patient_id}/{file_name}'
+    s3 = boto3.client('s3', region_name=settings.AWS_S3_REGION_NAME)
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+    # Determine MIME type
+    mime_type, _ = mimetypes.guess_type(file_key)
+    if mime_type is None:
+        mime_type = "application/octet-stream"  # Default binary type
+
+    try:
+        # Fetch file from S3
+        response = s3.get_object(Bucket=bucket_name, Key=file_key)
+        file_stream = io.BytesIO(response['Body'].read())  # Read file into memory
+
+        # Serve the file through Django (hiding S3 URL)
+        return FileResponse(file_stream, content_type=mime_type)
+
+    except (BotoCoreError, ClientError) as e:
+        print(f"Error retrieving file from S3: {e}")
+        return HttpResponseForbidden("Unable to access the requested file.")
 
 
 def format_prediction(latest_scan):
@@ -422,38 +477,57 @@ def all_files(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     uploads = patient.uploads.all()
 
-    s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-    bucket_name = AWS_STORAGE_BUCKET_NAME
-
-    upload_with_presigned_urls = []
+    upload_with_secure_urls = []
 
     for upload in uploads:
-        file_key = f'patient_{patient_id}/{upload.file_name}'
         try:
-            # Generate a presigned URL for each file
-            file_url = s3.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': bucket_name,
-                        'Key': file_key,
-                        'ResponseContentType': 'image/jpeg',
-                        'ResponseContentDisposition': 'inline',
-                        },
-                ExpiresIn=3600  # URL expires in 1 hour
-            )
+            # Generate a Django URL for secure image access
+            secure_url = reverse('secure_patient_image', args=[patient_id, upload.file_name])
+
+            # Ensure the prediction is a valid dictionary
+            prediction_data = upload.prediction
+            if isinstance(prediction_data, str):
+                import ast
+                prediction_data = ast.literal_eval(prediction_data)
+
             formatted_tumor_results = format_prediction(upload)
 
-            upload_with_presigned_urls.append({
+            upload_with_secure_urls.append({
                 'upload': upload,
-                'presigned_url': file_url,
-                'formatted_tumor_results': formatted_tumor_results
+                'secure_url': secure_url,  # Use Django URL instead of S3 presigned URL
+                'formatted_tumor_results': formatted_tumor_results,
+                'prediction': prediction_data
             })
 
         except Exception as e:
-            print(f"Error generating presigned URL for file {upload.file_name}: {e}")
-            upload_with_presigned_urls.append({
+            print(f"Error processing file {upload.file_name}: {e}")
+            upload_with_secure_urls.append({
                 'upload': upload,
-                'signed_url': None,
-                'formatted_tumor_results': None
+                'secure_url': None,
+                'formatted_tumor_results': None,
+                'prediction': None
             })
 
-    return render(request, 'all_files.html', {'upload_with_presigned_urls': upload_with_presigned_urls, 'patient': patient})
+    return render(request, 'all_files.html', {'upload_with_secure_urls': upload_with_secure_urls, 'patient': patient})
+
+
+def delete_patient(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+    bucket_name = AWS_STORAGE_BUCKET_NAME
+
+    file_key = f'patient_{patient_id}'
+
+    try:
+        patient_to_delete = s3.list_objects_v2(Bucket=bucket_name, Prefix=file_key)
+        if 'Contents' in patient_to_delete:
+            delete_keys = [{'Key': obj['Key']} for obj in patient_to_delete['Contents']]
+
+            s3.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_keys})
+
+        patient.delete()
+    except Exception as e:
+        print(f"Error deleting patient file from S3: {e}")
+
+    return redirect('patient_search')

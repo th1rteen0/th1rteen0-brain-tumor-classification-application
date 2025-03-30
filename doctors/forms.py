@@ -1,5 +1,5 @@
 from django import forms
-from .models import Patient, Upload
+from .models import Patient, Upload, Note
 from django.contrib.auth.models import User
 
 
@@ -15,3 +15,17 @@ class UploadForm(forms.ModelForm):
         fields = ['patient', 'file_name', 'file']
 
     file = forms.FileField(required=True)
+
+
+class NoteForm(forms.ModelForm):
+    class Meta:
+        model = Note
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'placeholder': 'Write your note here...',
+                # 'rows': 3,   # Adjust the number of rows as needed
+                # 'cols': 50,  # Adjust the number of columns as needed
+                'style': 'width: 100%; max-width: 100%;',  # Ensures it’s responsive
+            }),
+        }

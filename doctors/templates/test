@@ -1,0 +1,98 @@
+<div class="discussion-container card mt-4 p-3">
+    <div id="prompt-section" class="prompt-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Discussion</h3>
+            <!-- Button to show and hide the discussion -->
+            <button id="toggle-discussion" class="btn btn-outline-secondary">Hide Discussion</button>
+        </div>
+
+        <!-- Wrapping discussion content in a togglable div -->
+        <div id="discussion-content">
+            <!-- Display Prompts and Responses -->
+            <div id="prompts-container" class="prompts-container">
+                {% for prompt in prompts %}
+                    <div id="prompt-{{ prompt.id }}" class="prompt-card card mb-3">
+                        <!-- Prompt Header -->
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ prompt.content }}</strong>
+                                <p class="text-muted mb-0">Posted by
+                                    <a href="{% url 'view_profile' prompt.created_by.id %}" class="text-decoration-none">
+                                        {{ prompt.created_by.get_full_name|default:prompt.created_by.username }}
+                                    </a>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ prompt.created_at|date:"F j, Y, g:i a" }}</small>
+                                {% if request.user == prompt.created_by %}
+                                    <!-- Delete button for prompt author -->
+                                    <form method="post" action="{% url 'delete_prompt' prompt.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Are you sure you want to delete this prompt?');">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Replies:</h6>
+                            <ul class="list-group list-group-flush mb-3">
+                                {% for response in prompt.responses.all %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a href="{% url 'view_profile' response.created_by.id %}" class="text-decoration-none text-dark">
+                                                <strong>{{ response.created_by.username }}</strong>:
+                                            </a>
+                                            {{ response.content }}
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block">{{ response.created_at|date:"F j, Y, g:i a" }}</small>
+                                            {% if request.user == response.created_by %}
+                                                <!-- Delete button for response author -->
+                                                <form method="post" action="{% url 'delete_response' response.id %}" style="display:inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Are you sure you want to delete this response?');">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </li>
+                                {% empty %}
+                                    <li class="list-group-item text-muted">No replies yet.</li>
+                                {% endfor %}
+                            </ul>
+
+                            <!-- Add Response Form -->
+                            <form id="add-response-form-{{ prompt.id }}"
+                                class="add-response-form mt-2 d-flex align-items-center"
+                                method="post"
+                                data-prompt-id="{{ prompt.id }}"
+                                action="{% url 'view_file' project.name project.id file_id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="add_response" value="1">
+                                <input type="hidden" name="prompt_id" value="{{ prompt.id }}">
+                                <input type="text" name="content" placeholder="Reply to this discussion..." class="form-control me-2" required>
+                                <button type="submit" name="add_response" class="btn btn-primary btn-sm">Reply</button>
+                            </form>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">No prompts available for this file. Start a new discussion below!</p>
+                {% endfor %}
+            </div>
+
+            <!-- Add Prompt Form -->
+            <div id="add-prompt-form-section" class="mb-4 mt-5">
+                <h5>Start a New Discussion</h5>
+                <form id="add-prompt-form" method="post" action="{% url 'view_file' project.name project.id file_id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_prompt" value="1">
+                    <textarea name="content" placeholder="Propose a question for editors, or if you're an editor, share your feedback here..." class="form-control mb-2" rows="3" required></textarea>
+                    <button type="submit" name="add_prompt" class="btn btn-primary">Post Discussion</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

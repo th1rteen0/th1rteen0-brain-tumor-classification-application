@@ -42,12 +42,18 @@ class Upload(models.Model):
         return f"{self.file.name} for {self.patient.get_full_name()}"
 
 
+# class Note(models.Model):
+#     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='notes')
+#     content = models.TextField()
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     def __str__(self):
+#         return self.content[:50]
+
 class Note(models.Model):
-    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='notes')
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='notes')
     content = models.TextField()
+    # created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.content[:50]
-
