@@ -27,6 +27,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 import io
 from django.urls import reverse
 from django.template.loader import render_to_string
+from django.contrib import messages
 
 
 binary_model = load_model('models/binary_model.keras')
@@ -293,7 +294,6 @@ def patient_search(request):
     return render(request, 'patient_search.html', {'patients': patients, 'search_query': search_query})
 
 
-@csrf_exempt
 def patient_file(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     prediction = None
@@ -406,17 +406,42 @@ def delete_note(request, note_id):
 
 def edit_note(request, note_id):
     note = get_object_or_404(Note, id=note_id)
-    patient_id = note.patient.id
 
-    if request.method == "POST":
-        form = NoteForm(request.POST, instance=note)
-        if form.is_valid():
-            form.save()
-            return redirect('patient_file', patient_id=patient_id)  # Change to your desired redirect
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            note.content = content
+            note.save()
+            messages.success(request, 'Note updated successfully.')
+        else:
+            messages.error(request, 'Note content cannot be empty.')
+        return redirect('patient_file', patient_id=note.patient.id)
+
+
+def edit_patient(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        email = request.POST.get('email')
+        phone_number = request.POST.get('phone_number')
+        address = request.POST.get('address')
+
+        # Update patient details
+        patient.first_name = first_name
+        patient.last_name = last_name
+        patient.email = email
+        patient.phone_number = phone_number
+        patient.address = address
+        patient.save()
+
+        # Show success message and redirect
+        messages.success(request, 'Patient information updated successfully.')
+        return redirect('patient_file', patient_id=patient_id)
     else:
-        form = NoteForm(instance=note)
-
-    return render(request, 'edit_note.html', {'form': form, 'note': note, 'patient_id': patient_id})
+        messages.error(request, 'Invalid request.')
+        return redirect('patient_file', patient_id=patient_id)
 
 
 def secure_patient_image(request, patient_id, file_name):

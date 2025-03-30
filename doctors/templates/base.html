@@ -135,11 +135,11 @@
             <div class="d-flex mt-1">
 
                 <button id="toggle-btn" type="button">
-                    <i class="fa-solid fa-bars-staggered"></i> <!-- Icon for collapsing -->
+                    <i class="fa-solid fa-bars-staggered" style="font-size: 1.5rem;"></i> <!-- Icon for collapsing -->
                 </button>
 
                 <div class="sidebar-logo">
-                    <a href="{% url 'dashboard' %}">Brain Tumor Detector</a>
+                    <a href="{% url 'dashboard' %}" class="text-center" style="font-size: 1.5rem;">Tumor Detector</a>
                 </div>
 
             </div>
@@ -147,26 +147,26 @@
             <ul class="sidebar-nav">
                 <li class="sidebar-item">
                     <a href="{% url 'dashboard' %}" class="sidebar-link">
-                        <i class="fa-solid fa-compass"></i>
-                        <span>Home</span>
+                        <i class="fa-solid fa-compass" style="font-size: 1.5rem;"></i>
+                        <span class="text-center" style="font-size: 1.5rem;">Home</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
                     <a href="{% url 'new_scan' %}" class="sidebar-link">
-                        <i class="fa-solid fa-brain"></i>
-                        <span>Scan Brain Image</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a href="{% url 'create_patient_file' %}" class="sidebar-link">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Create a New Patient File</span>
+                        <i class="fa-solid fa-brain" style="font-size: 1.5rem;"></i>
+                        <span class="text-center" style="font-size: 1.5rem;">Scan Brain Image</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
                     <a href="{% url 'patient_search' %}" class="sidebar-link">
-                        <i class="fa-solid fa-users"></i>
-                        <span>All Patients</span>
+                        <i class="fa-solid fa-users" style="font-size: 1.5rem;"></i>
+                        <span style="font-size: 1.5rem;">All Patients</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="{% url 'create_patient_file' %}" class="sidebar-link">
+                        <i class="fa-solid fa-plus" style="font-size: 1.5rem;"></i>
+                        <span style="font-size: 1.5rem;">New Patient File</span>
                     </a>
                 </li>
             </ul>
@@ -174,7 +174,7 @@
             <div class="sidebar-footer">
                 <!-- add logout later-->
                 <a href="" class="sidebar-link">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 1.5rem;"></i>
                     <span>Logout</span>
                 </a>
             </div>

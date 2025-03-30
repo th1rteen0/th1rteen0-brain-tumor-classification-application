@@ -21,7 +21,7 @@
 
             <!-- Display the Uploaded Scan -->
             {% if scanned_file_url %}
-                <div id="upload-section-image" class="px-4 py-4 border rounded w-100 bg-white d-flex align-items-center justify-content-center shadow-sm mb-4" style="width: 450px; height: 350px;">
+                <div id="upload-section-image" class="px-4 py-4 w-100 bg-white d-flex align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
                     <img src="{{ scanned_file_url }}" alt="Uploaded Scan" class="img-fluid rounded shadow-sm" style="max-width: 425px; max-height: 325px;">
                 </div>
             {% endif %}
@@ -53,8 +53,8 @@
 
             <!-- Results -->
             {% if result %}
-                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center border rounded shadow-sm mb-4 bg-white" style="width: 450px; height: 350px;">
-                    <h5 class="text-primary text-center fw-bold mb-2">{{ result }}</h5>
+                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
+                    <h5 class="text-primary text-center mb-2">{{ result }}</h5>
                     <ul class="list-unstyled">
                         {% if result == "Brain Tumor Detected" %}
                             <li>

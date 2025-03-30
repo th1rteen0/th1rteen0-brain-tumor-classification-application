@@ -34,7 +34,15 @@
                             <td class="text-muted">No URL available</td>
                         {% endif %}
                         <td>{{ item.upload.uploaded_at }}</td>
-                        <td class="fw-bold text-success">{{ item.upload.prediction.0 }}</td>
+                        {% if item.upload.prediction.0 == "Brain Tumor Detected" %}
+                            <td class="fw-bold text-success">
+                                {{ item.upload.prediction.0 }}
+                            </td>
+                        {% elif item.upload.prediction.0 == "No Brain Tumor Detected" %}
+                            <td class="fw-bold text-danger">
+                                {{ item.upload.prediction.0 }}
+                            </td>
+                        {% endif %}
                         <td>
                             <!-- View Details button -->
                             <button type="button" class="btn btn-info btn-sm px-3 shadow-sm" onclick="toggleDetails(this)">View Details</button>
@@ -43,7 +51,17 @@
 
                     <!-- Prediction Details Row -->
                     <tr class="prediction-row" style="display: none;">
-                        <td colspan="5" class="bg-light">
+                        <td colspan="3" class="bg-light">
+                            {% if item.secure_url %}
+                                <img class="img-fluid rounded shadow-sm"
+                                     src="{{ item.secure_url }}"
+                                     alt="{{ item.upload.file_name }}"
+                                     style="max-width: 350px; max-height: 350px; object-fit: contain;">
+                            {% else %}
+                                <p class="text-muted">No image available</p>
+                            {% endif %}
+                        </td>
+                        <td colspan="2" class="bg-light">
                             <div class="text-start p-3">
                                 <h6 class="text-primary fw-bold">Prediction Details:</h6>
                                 <ul>
@@ -65,7 +83,7 @@
                     </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-muted">No files uploaded for this patient.</td>
+                    <td colspan="5" class="text-muted">No scans uploaded for this patient.</td>
                 </tr>
                 {% endfor %}
             </tbody>

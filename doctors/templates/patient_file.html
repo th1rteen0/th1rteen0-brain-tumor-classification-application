@@ -3,33 +3,39 @@
 
 {% block content %}
 <div class="container mt-4 mb-5">
-
     <!-- Patient File Title with Back Button -->
     <div class="d-flex align-items-center mb-5" style="position: relative;">
         <a href="{% url 'patient_search' %}" class="text-decoration-none text-primary d-flex align-items-center" style="position: absolute; left: 0;">
             <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
             <span class="ms-2 fw-bold">Back</span>
         </a>
-        <h2 class="text-primary text-center fw-semibold w-100 m-0">{{ patient }}'s File</h2>
+        <h2 class="text-primary text-center fw-bold w-100 m-0">{{ patient }}'s File</h2>
     </div>
 
     <div class="row justify-content-around rounded border shadow-sm p-4">
+
         <!-- Most Recent Scan (Image) Section with Predictions -->
         <div class="col-sm-5 d-flex flex-column border-end border-1 pe-4">
             <h3 class="mb-4 text-primary">Most Recent Scan</h3>
-            <div class="mb-2 d-flex align-items-center justify-content-center" style="width: 100%; height: 300px;">
+
+            <div class="d-flex flex-column justify-content-center align-items-center" style="height: 100%;">
+
+            <!-- Image Section-->
+            <div class="d-flex align-items-center justify-content-center mb-auto">
                 {% if latest_scan %}
-                    <img class="img-fluid rounded shadow-sm"
+                <div style="width: 100%; height: 300px;">
+                    <img class="img-fluid rounded shadow-sm mb-4"
                          src="{% url 'secure_patient_image' patient.id latest_scan.file_name %}"
                          alt="Latest scan"
                          style="max-width: 100%; max-height: 100%;">
+                </div>
                 {% else %}
                     <p class="text-muted fw-light">No recent scan available.</p>
                 {% endif %}
             </div>
 
             <!-- Prediction Section -->
-            <div class="border border-1 rounded mt-4 p-3 bg-white shadow-sm">
+            <div class="border border-1 rounded p-3 bg-white shadow-sm mb-auto">
                 <h4 class="text-success mb-3">Prediction Results</h4>
                 {% if latest_scan.prediction %}
                 <div class="row">
@@ -57,12 +63,15 @@
                     </div>
                 </div>
                 {% else %}
+                <div class="row">
                     <p class="text-muted">No predictions available.</p>
+                </div>
                 {% endif %}
+            </div>
             </div>
 
             <!-- View All Files Button -->
-            <div class="mt-4 text-center">
+            <div class="mt-auto text-center">
                 <a href="{% url 'all_files' patient.id %}">
                     <button class="btn btn-primary w-100">View All Scans</button>
                 </a>
@@ -70,14 +79,16 @@
         </div>
 
         <!-- Patient Notes Section -->
-        <div class="col-sm-4 d-flex flex-column border-end border-1 px-4">
+        <div class="col-sm-4 d-flex flex-column border-end border-1 px-3">
             <h3 class="mb-4 text-primary">Patient Notes</h3>
             {% include 'partials/notes_partial.html' %}
         </div>
 
         <!-- Patient Information Section -->
         <div class="col-sm-3 d-flex flex-column">
+            <!-- Header -->
             <h3 class="mb-4 text-primary text-center">Patient Information</h3>
+            <!--Information Container -->
             <div class="px-4 py-4 border rounded bg-white shadow-sm" style="height: 100%;">
                 <ul class="list-unstyled text-muted">
                     <li class="mb-3">
@@ -97,6 +108,48 @@
                     </li>
                 </ul>
             </div>
+            <!-- Edit Patient Information Button -->
+            <button class="btn btn-primary w-100 mt-4" data-bs-toggle="modal" data-bs-target="#editPatientModal">Edit Information</button>
+            <!-- Edit Patient Information Modal -->
+            <div class="modal fade" id="editPatientModal" tabindex="-1" aria-labelledby="editPatientModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-primary" id="editPatientModalLabel">Edit Patient Information</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="edit-patient-form" method="POST" action="{% url 'edit_patient' patient.id %}">
+                            <div class="modal-body">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ patient.first_name }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ patient.last_name }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ patient.email }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="text" class="form-control" id="phone" name="phone_number" value="{{ patient.phone_number }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">Address</label>
+                                    <input type="text" class="form-control" id="address" name="address" value="{{ patient.address }}" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -104,4 +157,5 @@
 {% endblock %}
 
 <script>
+
 </script>
