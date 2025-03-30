@@ -507,9 +507,7 @@ def all_files(request, patient_id):
                 'formatted_tumor_results': None,
                 'prediction': None
             })
-
     return render(request, 'all_files.html', {'upload_with_secure_urls': upload_with_secure_urls, 'patient': patient})
-
 
 def delete_patient(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
