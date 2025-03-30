@@ -2,35 +2,36 @@
 {% load static %}
 
 {% block content %}
-<div class="container mt-4 mb-4">
+<div class="container mt-4 mb-5">
 
-    <h2 class="mb-4">Upload New Scan for Tumor Prediction</h2>
+    <h2 class="text-primary text-center fw-bold mb-5">Upload New Scan for Tumor Prediction</h2>
 
-    <div class="row bg-light p-4 justify-content-around rounded shadow-sm">
+    <div class="row justify-content-around border rounded shadow-sm p-4">
 
         <!-- Upload Section -->
         <div class="col-sm-5 d-flex flex-column align-items-center">
 
-            <div id="upload-section-title">
+            <div id="upload-section-title" class="text-center mb-3">
                 {% if scanned_file_url %}
-                    <h3 class="mb-3">Image Scanned:</h3>
+                    <h4 class="text-primary">Image Scanned:</h4>
                 {% else %}
-                    <h3 class="mb-3">Choose Image to Scan:</h3>
+                    <h4 class="text-primary">Choose Image to Scan:</h4>
                 {% endif %}
             </div>
 
             <!-- Display the Uploaded Scan -->
             {% if scanned_file_url %}
-                <div id="upload-section-image" class="d-flex align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
-                    <img src="{{ scanned_file_url }}" alt="Uploaded Scan" class="img-fluid rounded shadow-sm" style="max-width: 450px; max-height: 350px;">
+                <div id="upload-section-image" class="px-4 py-4 border rounded w-100 bg-white d-flex align-items-center justify-content-center shadow-sm mb-4" style="width: 450px; height: 350px;">
+                    <img src="{{ scanned_file_url }}" alt="Uploaded Scan" class="img-fluid rounded shadow-sm" style="max-width: 425px; max-height: 325px;">
                 </div>
             {% endif %}
 
             <!-- File Upload Form -->
             {% if scanned_file_url %}
-                <h3 id="upload-section-form">Upload & Scan Another Image:</h3>
+                <h4 class="text-center text-primary mb-3 mt-3">Upload & Scan Another Image:</h4>
             {% endif %}
-                <form method="POST" enctype="multipart/form-data" class="w-100 px-3">
+            <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
+                <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="form-group mb-3">
                         <label for="scanned_file" class="form-label fw-bold">Select file:</label>
@@ -40,19 +41,20 @@
                         <button type="submit" class="btn btn-primary btn-block">Upload and Predict</button>
                     </div>
                 </form>
+            </div>
         </div>
 
         <!-- Results (Prediction and Assignment) Section -->
         <div class="col-sm-5 d-flex flex-column align-items-center">
 
-            <div id="result-section-title">
-                <h3 class="mb-3">Prediction:</h3>
+            <div id="result-section-title" class="text-center mb-3">
+                <h4 class="text-primary">Prediction Results</h4>
             </div>
 
             <!-- Results -->
             {% if result %}
-                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
-                    <h4 class="text-primary">{{ result }}</h4>
+                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center border rounded shadow-sm mb-4 bg-white" style="width: 450px; height: 350px;">
+                    <h5 class="text-primary text-center fw-bold mb-2">{{ result }}</h5>
                     <ul class="list-unstyled">
                         {% if result == "Brain Tumor Detected" %}
                             <li>
@@ -73,7 +75,7 @@
 
                     {% if tumor_results %}
                         {% if result == "Brain Tumor Detected" %}
-                            <h4 class="mt-3">Possible Tumor Types:</h4>
+                        <h5 class="text-primary mt-4">Possible Tumor Types:</h5>
                             <ul class="list-unstyled">
                                 {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
                                     {% for tumor in tumor_results %}
@@ -88,7 +90,7 @@
                                 {% endwith %}
                             </ul>
                         {% else %}
-                            <h4 class="mt-3 text-center">Potential Tumor Types Based on the Detection Confidence of {{ other_confidence }}:</h4>
+                            <h5 class="text-primary text-center mt-4">Potential Tumor Types Based on the Detection Confidence of {{ other_confidence }}:</h5>
                             <ul class="list-unstyled">
                                 {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
                                     {% for tumor in tumor_results %}
@@ -106,33 +108,35 @@
                     {% endif %}
                 </div>
             {% else %}
-                <p>There are no predictions to display.</p>
+                <p class="text-muted text-center">There are no predictions to display.</p>
             {% endif %}
 
             <!-- Assignment Form -->
             {% if result %}
-                <h3>Assign Scan to Patient:</h3>
-                <form id="result-assignment-form" method="post" class="w-100 px-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="filename" value="{{ filename }}">
-                    <input type="hidden" name="result" value="{{ result }}">
-                    <input type="hidden" name="result_confidence" value="{{ result_confidence }}">
-                    <input type="hidden" name="other_confidence" value="{{ other_confidence }}">
-                    <input type="hidden" name="tumor_results" value="{{ tumor_results }}">
+                <h4 class="text-primary mb-3 mt-3">Assign Scan to Patient:</h4>
+                <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
+                    <form id="result-assignment-form" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="filename" value="{{ filename }}">
+                        <input type="hidden" name="result" value="{{ result }}">
+                        <input type="hidden" name="result_confidence" value="{{ result_confidence }}">
+                        <input type="hidden" name="other_confidence" value="{{ other_confidence }}">
+                        <input type="hidden" name="tumor_results" value="{{ tumor_results }}">
 
-                    <div class="form-group mb-3">
-                        <label for="patient_id" class="form-label fw-bold">Select patient:</label>
-                        <select name="patient_id" id="patient-dropdown" class="form-select" required>
-                            {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                        <div class="form-group mb-3">
+                            <label for="patient_id" class="form-label fw-bold">Select patient:</label>
+                            <select name="patient_id" id="patient-dropdown" class="form-select" required>
+                                {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-                    <div class="d-grid">
-                        <button type="submit" name="assign_scan" value="true" class="btn btn-primary btn-block">Assign Scan</button>
-                    </div>
-                </form>
+                        <div class="d-grid">
+                            <button type="submit" name="assign_scan" value="true" class="btn btn-primary btn-block">Assign Scan</button>
+                        </div>
+                    </form>
+                </div>
             {% endif %}
 
         </div>

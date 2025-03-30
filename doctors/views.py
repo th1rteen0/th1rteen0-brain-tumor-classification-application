@@ -293,6 +293,7 @@ def patient_search(request):
     return render(request, 'patient_search.html', {'patients': patients, 'search_query': search_query})
 
 
+@csrf_exempt
 def patient_file(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     prediction = None
@@ -393,6 +394,31 @@ def patient_file(request, patient_id):
     return render(request, 'patient_file.html', context)
 
 
+def delete_note(request, note_id):
+    if request.method == 'POST':
+        note = get_object_or_404(Note, id=note_id)
+
+        patient_id = note.patient.id
+        note.delete()
+
+        return redirect('patient_file', patient_id=patient_id)
+
+
+def edit_note(request, note_id):
+    note = get_object_or_404(Note, id=note_id)
+    patient_id = note.patient.id
+
+    if request.method == "POST":
+        form = NoteForm(request.POST, instance=note)
+        if form.is_valid():
+            form.save()
+            return redirect('patient_file', patient_id=patient_id)  # Change to your desired redirect
+    else:
+        form = NoteForm(instance=note)
+
+    return render(request, 'edit_note.html', {'form': form, 'note': note, 'patient_id': patient_id})
+
+
 def secure_patient_image(request, patient_id, file_name):
     """ Fetches and streams the file from S3 to the user without exposing the S3 URL. """
 
@@ -436,43 +462,6 @@ def format_prediction(latest_scan):
     return final_list
 
 
-@csrf_exempt
-def manage_notes(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-
-    if request.method == 'GET':
-        notes = list(Note.objects.filter(patient=patient).values())
-        return JsonResponse({'notes': notes})
-
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        content = data.get('content', '')
-        if content.strip():
-            note = Note.objects.create(patient=patient, content=content)
-            return JsonResponse({'id': note.id, 'content': note.content, 'created_at': note.created_at})
-        return JsonResponse({'error': 'Content cannot be empty'}, status=400)
-
-    if request.method == 'DELETE':
-        data = json.loads(request.body)
-        note_id = data.get('id')
-        note = get_object_or_404(Note, id=note_id, patient=patient)
-        note.delete()
-        return JsonResponse({'message': 'Note deleted'})
-
-    if request.method == 'PUT':
-        data = json.loads(request.body)
-        note_id = data.get('id')
-        content = data.get('content', '')
-        note = get_object_or_404(Note, id=note_id, patient=patient)
-        if content.strip():
-            note.content = content
-            note.save()
-            return JsonResponse({'id': note.id, 'content': note.content, 'updated_at': note.updated_at})
-        return JsonResponse({'error': 'Content cannot be empty'}, status=400)
-
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
 def all_files(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     uploads = patient.uploads.all()
@@ -508,6 +497,7 @@ def all_files(request, patient_id):
                 'prediction': None
             })
     return render(request, 'all_files.html', {'upload_with_secure_urls': upload_with_secure_urls, 'patient': patient})
+
 
 def delete_patient(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)

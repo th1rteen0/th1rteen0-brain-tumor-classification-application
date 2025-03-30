@@ -1,0 +1,16 @@
+{% extends 'base.html' %}  <!-- Change 'base.html' to match your layout -->
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit Note</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.as_p }}  <!-- Renders form fields nicely -->
+        </div>
+        <button type="submit" class="btn btn-success">Save Changes</button>
+        <a href="{% url 'patient_file' patient_id %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -3,41 +3,40 @@
 
 
 {% block content %}
-<div class="container mt-4 mb-4">
-
-    <h1 class="mb-4">All Patients</h1>
+<div class="container mt-4 mb-5">
+    <!-- Title Section -->
+    <div class="text-center mb-5">
+        <h1 class="text-primary fw-bold">All Patients</h1>
+    </div>
 
     <!-- Search Bar -->
-    <form method="get" action="{% url 'patient_search' %}" class="mb-4">
-        <div class="input-group">
-            <input type="text" name="q" placeholder="Search patients by first, last, or full name..." value="{{ search_query }}" class="form-control">
-            <button type="submit" class="btn btn-primary">Search</button>
-        </div>
-    </form>
+    <div class="mb-4">
+        <form method="get" action="{% url 'patient_search' %}" class="d-flex">
+            <input type="text" name="q" placeholder="Search patients by first, last, or full name..." value="{{ search_query }}" class="form-control shadow-sm">
+            <button type="submit" class="btn btn-primary ms-2 px-4 shadow-sm">Search</button>
+        </form>
+    </div>
 
     {% if patients %}
+    <!-- Patient List -->
         <ul class="list-group">
             {% for patient in patients %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-
-                    <!--patient name-->
-                    <div>
-                        <span>{{patient}}</span>
+                    <!--Patient Name-->
+                    <div class="fw-semibold text-dark">
+                        {{ patient }}
                     </div>
 
-                    <!--view file button -->
-                    <div class="view-file-button">
-                        <a href="{% url 'patient_file' patient.id %}">
-                            <button type="button" class="btn btn-primary">View File</button>
-                        </a>
-                    </div>
-
-
+                    <!-- View File Button -->
+                    <a href="{% url 'patient_file' patient.id %}" class="btn btn-primary px-3">
+                        View File
+                    </a>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p>There are no patients in the system at the moment.</p>
+        <!-- Empty State -->
+        <p class="text-muted text-center">There are no patients in the system at the moment.</p>
     {% endif %}
 
 </div>
