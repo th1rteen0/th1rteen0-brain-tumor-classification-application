@@ -28,6 +28,7 @@ import io
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.contrib import messages
+from django.utils import timezone
 
 
 binary_model = load_model('models/binary_model.keras')
@@ -35,7 +36,10 @@ tumor_model = load_model('models/multi_class_braintumormodel.keras')
 
 
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    patients = Patient.objects.all()
+    # Fetch the three latest scans
+    uploads = Upload.objects.all().order_by('-uploaded_at')[:3]  # Fetch all uploads ordered by upload date (newest first)
+    return render(request, 'dashboard.html', {'patients': patients, 'uploads': uploads})
 
 
 def new_scan(request):
@@ -296,8 +300,6 @@ def patient_search(request):
 
 def patient_file(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
-    prediction = None
-    file_url = None
     formatted_tumor_results = None
 
     try:
@@ -307,54 +309,8 @@ def patient_file(request, patient_id):
     except Upload.DoesNotExist:
         latest_scan = None
 
-    # if latest_scan:
-    #     s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-    #     bucket_name = AWS_STORAGE_BUCKET_NAME
-    #
-    #     # Determine the S3 file key from the file_obj's path
-    #     file_key = f'patient_{patient_id}/{latest_scan.file_name}'
-    #
-    #     file_url = s3.generate_presigned_url(
-    #         'get_object',
-    #         Params={
-    #             'Bucket': bucket_name,
-    #             'Key': file_key,
-    #             # makes sure the browser is able to handle the display the correct media type
-    #             'ResponseContentType': 'image/jpeg',
-    #             'ResponseContentDisposition': 'inline',
-    #         },
-    #         ExpiresIn=3600  # URL expires in 1 hour
-    #
-
-    # Handle file upload and prediction
-    # if request.method == 'POST' and request.FILES.get('scan_file'):
-    #     scan_file = request.FILES['scan_file']
-    #     fs = FileSystemStorage()
-    #     filename = fs.save(scan_file.name, scan_file)
-    #
-    #     # Get prediction for the new scan
-    #     result, result_confidence, other_confidence, tumor_results = get_prediction_for_scan(scan_file)
-    #
-    #     # Upload to S3
-    #     s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-    #     file_path = f'patient_{patient_id}/{filename}'
-    #
-    #     try:
-    #         temp_file_path = fs.path(filename)
-    #         s3.upload_file(temp_file_path, AWS_STORAGE_BUCKET_NAME, file_path)
-    #         scanned_file_url = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{file_path}'
-    #
-    #         prediction = [result, result_confidence, other_confidence, tumor_results]
-    #
-    #         latest_scan = Upload.objects.create(patient=patient, file_name=filename, file_url=scanned_file_url,
-    #                                             prediction=prediction)
-    #
-    #     except Exception as e:
-    #         print(f"Error uploading to S3: {e}")
-    #         file_url = None  # Ensure file_url is None if upload fails
-
     # Retrieve All Notes
-    notes = patient.notes.all()  # Retrieve all prompts related to this upload
+    notes = Note.objects.filter(patient_id=patient_id).order_by('-created_at')
 
     # Handle note form submission
     if request.method == 'POST' and 'add_note' in request.POST:
@@ -385,13 +341,52 @@ def patient_file(request, patient_id):
     context = {
         'patient': patient,
         'latest_scan': latest_scan,
-        # 'file_url': file_url if file_url else None,
         'formatted_tumor_results': formatted_tumor_results,
         'note_form': note_form,
         'notes': notes,
     }
 
     return render(request, 'patient_file.html', context)
+
+
+def delete_patient(request, patient_id):
+    # Fetch the patient
+    patient = get_object_or_404(Patient, id=patient_id)
+    uploads = patient.uploads.all()
+
+    # Initialize S3 client
+    s3 = boto3.client('s3', region_name=settings.AWS_S3_REGION_NAME)
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+    # Delete associated files from AWS S3
+    for upload in uploads:
+        file_key = f'patient_{patient_id}/{upload.file_name}'
+        s3.delete_object(Bucket=bucket_name, Key=file_key)
+
+        upload.delete()  # Delete upload record from the database
+
+    # Delete the patient record
+    patient.delete()
+
+    return redirect('patient_search')
+
+
+def delete_file(request, patient_id, upload_id):
+    # Fetch the patient and uploaded file
+    patient = get_object_or_404(Patient, id=patient_id)
+    upload = get_object_or_404(Upload, id=upload_id)
+
+    # Initialize S3 client
+    s3 = boto3.client('s3', region_name=settings.AWS_S3_REGION_NAME)
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+    # Delete the file from AWS S3
+    file_key = f'patient_{patient_id}/{upload.file_name}'
+    s3.delete_object(Bucket=bucket_name, Key=file_key)
+
+    upload.delete()  # Delete upload record from the database
+
+    return redirect('all_files', patient_id=patient_id)
 
 
 def delete_note(request, note_id):
@@ -411,6 +406,7 @@ def edit_note(request, note_id):
         content = request.POST.get('content')
         if content:
             note.content = content
+            note.created_at = timezone.now()
             note.save()
             messages.success(request, 'Note updated successfully.')
         else:
@@ -493,54 +489,36 @@ def all_files(request, patient_id):
 
     upload_with_secure_urls = []
 
-    for upload in uploads:
-        try:
-            # Generate a Django URL for secure image access
-            secure_url = reverse('secure_patient_image', args=[patient_id, upload.file_name])
+    if uploads.exists():
+        for upload in uploads:
+            try:
+                # Generate a Django URL for secure image access
+                secure_url = reverse('secure_patient_image', args=[patient_id, upload.file_name])
 
-            # Ensure the prediction is a valid dictionary
-            prediction_data = upload.prediction
-            if isinstance(prediction_data, str):
-                import ast
-                prediction_data = ast.literal_eval(prediction_data)
+                # Ensure the prediction is a valid dictionary
+                prediction_data = upload.prediction
+                if isinstance(prediction_data, str):
+                    import ast
+                    prediction_data = ast.literal_eval(prediction_data)
 
-            formatted_tumor_results = format_prediction(upload)
+                formatted_tumor_results = format_prediction(upload)
 
-            upload_with_secure_urls.append({
-                'upload': upload,
-                'secure_url': secure_url,  # Use Django URL instead of S3 presigned URL
-                'formatted_tumor_results': formatted_tumor_results,
-                'prediction': prediction_data
-            })
+                upload_with_secure_urls.append({
+                    'upload': upload,
+                    'secure_url': secure_url,  # Use Django URL instead of S3 presigned URL
+                    'formatted_tumor_results': formatted_tumor_results,
+                    'prediction': prediction_data
+                })
 
-        except Exception as e:
-            print(f"Error processing file {upload.file_name}: {e}")
-            upload_with_secure_urls.append({
-                'upload': upload,
-                'secure_url': None,
-                'formatted_tumor_results': None,
-                'prediction': None
-            })
-    return render(request, 'all_files.html', {'upload_with_secure_urls': upload_with_secure_urls, 'patient': patient})
+            except Exception as e:
+                print(f"Error processing file {upload.file_name}: {e}")
+                upload_with_secure_urls.append({
+                    'upload': upload,
+                    'secure_url': None,
+                    'formatted_tumor_results': None,
+                    'prediction': None
+                })
+    else:
+        return render(request, 'all_files.html', {'patient': patient})
 
-
-def delete_patient(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-
-    s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
-    bucket_name = AWS_STORAGE_BUCKET_NAME
-
-    file_key = f'patient_{patient_id}'
-
-    try:
-        patient_to_delete = s3.list_objects_v2(Bucket=bucket_name, Prefix=file_key)
-        if 'Contents' in patient_to_delete:
-            delete_keys = [{'Key': obj['Key']} for obj in patient_to_delete['Contents']]
-
-            s3.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_keys})
-
-        patient.delete()
-    except Exception as e:
-        print(f"Error deleting patient file from S3: {e}")
-
-    return redirect('patient_search')
+    return render(request, 'all_files.html', {'upload_with_secure_urls': upload_with_secure_urls, 'patient': patient, 'upload': upload})

@@ -5,9 +5,7 @@
 {% block content %}
 <div class="container mt-4 mb-5">
     <!-- Title -->
-    <div class="text-center mb-5">
-        <h2 class="text-primary fw-bold">Create New Patient File</h2>
-    </div>
+    <h1 class="mb-5">Create New Patient File</h1>
 
     <!-- Form Section -->
     <div class="p-4 border rounded shadow-sm">
@@ -18,7 +16,7 @@
             {% for field in form %}
                 <div class="mb-4">
                     <!-- Field Label -->
-                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
                         {{ field.label }}
                     </label>
 

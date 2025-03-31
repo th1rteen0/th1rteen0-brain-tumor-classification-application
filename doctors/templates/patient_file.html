@@ -4,70 +4,74 @@
 {% block content %}
 <div class="container mt-4 mb-5">
     <!-- Patient File Title with Back Button -->
-    <div class="d-flex align-items-center mb-5" style="position: relative;">
-        <a href="{% url 'patient_search' %}" class="text-decoration-none text-primary d-flex align-items-center" style="position: absolute; left: 0;">
+    <div class="d-flex align-items-center justify-content-center mb-5" style="position: relative;">
+        <a href="{% url 'patient_search' %}" class="text-decoration-none d-flex align-items-center text-dark" style="position: absolute; left: 0;">
             <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
-            <span class="ms-2 fw-bold">Back</span>
+            <span class="ms-2">Back</span>
         </a>
-        <h2 class="text-primary text-center fw-bold w-100 m-0">{{ patient }}'s File</h2>
+        <h2 class="text-center w-100 m-0">{{ patient }}'s File</h2>
     </div>
+
 
     <div class="row justify-content-around rounded border shadow-sm p-4">
 
         <!-- Most Recent Scan (Image) Section with Predictions -->
         <div class="col-sm-5 d-flex flex-column border-end border-1 pe-4">
-            <h3 class="mb-4 text-primary">Most Recent Scan</h3>
+            <h3 class="mb-4">Most Recent Scan</h3>
 
             <div class="d-flex flex-column justify-content-center align-items-center" style="height: 100%;">
 
-            <!-- Image Section-->
-            <div class="d-flex align-items-center justify-content-center mb-auto">
-                {% if latest_scan %}
-                <div style="width: 100%; height: 300px;">
-                    <img class="img-fluid rounded shadow-sm mb-4"
-                         src="{% url 'secure_patient_image' patient.id latest_scan.file_name %}"
-                         alt="Latest scan"
-                         style="max-width: 100%; max-height: 100%;">
+                <!-- Image Section-->
+                <div class="d-flex align-items-center justify-content-center mb-4">
+                    {% if latest_scan %}
+                    <div style="width: 100%; height: 300px;">
+                        <img class="img-fluid rounded shadow-sm mb-4"
+                             src="{% url 'secure_patient_image' patient.id latest_scan.file_name %}"
+                             alt="Latest scan"
+                             style="max-width: 100%; max-height: 100%;">
+                    </div>
+                    {% else %}
+                        <p class="text-muted fw-light">No recent scan available.</p>
+                    {% endif %}
                 </div>
-                {% else %}
-                    <p class="text-muted fw-light">No recent scan available.</p>
-                {% endif %}
-            </div>
 
-            <!-- Prediction Section -->
-            <div class="border border-1 rounded p-3 bg-white shadow-sm mb-auto">
-                <h4 class="text-success mb-3">Prediction Results</h4>
-                {% if latest_scan.prediction %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="fw-bold mb-1">{{ latest_scan.prediction.0 }}</p>
-                        <ul class="text-muted">
-                            {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
-                                <li>Detection Confidence: {{ latest_scan.prediction.1 }}</li>
-                                <li>No Tumor Confidence: {{ latest_scan.prediction.2 }} </li>
-                            {% else %}
-                                <li>No Tumor Confidence: {{ latest_scan.prediction.1 }}</li>
-                                <li>Tumor Detection Confidence: {{ latest_scan.prediction.2 }}</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="fw-bold mb-1">Possible Tumor Types:</p>
-                        {% if formatted_tumor_results %}
+                {% if latest_scan %}
+                <!-- Prediction Section -->
+                <div class="border border-1 rounded p-3 bg-white shadow-sm mb-4">
+                    <h4 class="text-success mb-3">Prediction Results</h4>
+                    {% if latest_scan.prediction %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="fw-bold mb-1">{{ latest_scan.prediction.0 }}</p>
                             <ul class="text-muted">
-                                {% for each in formatted_tumor_results %}
-                                    <li>{{ each }}</li>
-                                {% endfor %}
+                                {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
+                                    <li>Detection Confidence: {{ latest_scan.prediction.1 }}</li>
+                                    <li>No Tumor Confidence: {{ latest_scan.prediction.2 }} </li>
+                                {% else %}
+                                    <li>No Tumor Confidence: {{ latest_scan.prediction.1 }}</li>
+                                    <li>Tumor Detection Confidence: {{ latest_scan.prediction.2 }}</li>
+                                {% endif %}
                             </ul>
-                        {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p class="fw-bold mb-1">Possible Tumor Types:</p>
+                            {% if formatted_tumor_results %}
+                                <ul class="text-muted">
+                                    {% for each in formatted_tumor_results %}
+                                        <li>{{ each }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                {% else %}
-                <div class="row">
-                    <p class="text-muted">No predictions available.</p>
+                    {% else %}
+                    <div class="row">
+                        <p class="text-muted">No predictions available.</p>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
-            </div>
+
             </div>
 
             <!-- View All Files Button -->
@@ -80,14 +84,14 @@
 
         <!-- Patient Notes Section -->
         <div class="col-sm-4 d-flex flex-column border-end border-1 px-3">
-            <h3 class="mb-4 text-primary">Patient Notes</h3>
+            <h3 class="mb-4">Patient Notes</h3>
             {% include 'partials/notes_partial.html' %}
         </div>
 
         <!-- Patient Information Section -->
         <div class="col-sm-3 d-flex flex-column">
             <!-- Header -->
-            <h3 class="mb-4 text-primary text-center">Patient Information</h3>
+            <h3 class="mb-4">Patient Information</h3>
             <!--Information Container -->
             <div class="px-4 py-4 border rounded bg-white shadow-sm" style="height: 100%;">
                 <ul class="list-unstyled text-muted">
@@ -138,13 +142,18 @@
                                     <input type="text" class="form-control" id="phone" name="phone_number" value="{{ patient.phone_number }}" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="address" class="form-label">Address</label>
+                                    <lfabel for="address" class="form-label">Address</lfabel>
                                     <input type="text" class="form-control" id="address" name="address" value="{{ patient.address }}" required>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-primary">Save Changes</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <div class="modal-footer d-flex justify-content-between">
+                                <a href="{% url 'delete_patient' patient.id %}">
+                                    <button type="button" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this patient file?');">Delete Patient</button>
+                                </a>
+                                <div>
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                </div>
                             </div>
                         </form>
                     </div>

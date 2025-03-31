@@ -1,9 +1,123 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends "base.html" %}
 
+{% block title %} Common User Dashboard {% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-4">
-    <h1 class="mb-4">Welcome to the Dashboard!</h1>
+<div class="container mt-4 mb-5">
+
+    <h1 class="mb-5">Welcome to the Dashboard!</h1>
+
+    <div class="row justify-content-around border rounded shadow-sm p-4">
+        <!-- Two-Column Layout -->
+        <div class="row mt-4">
+            <!-- Column for Scanning Actions -->
+            <div class="col-md-3">
+
+                <!-- Scan New Image -->
+                <div class="card card-scan-image mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">Scan New Image</h4>
+                        <a href="{% url 'new_scan' %}" class="btn btn-info w-100 text-white">
+                            <i class="fas fa-list-ul me-2"></i>Scan File
+                        </a>
+                    </div>
+                </div>
+
+                <!-- View All Patients Section -->
+                <div class="card card-view-patients mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">View All Patients</h4>
+                        <a href="{% url 'patient_search' %}" id="viewPatientsBtn" class="btn btn-secondary w-100">
+                            <i class="fas fa-list-ul me-2"></i>View Patients
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Create Patient File Section -->
+                <div class="card card-create-patient-file mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title">Create New Patient File</h4>
+                        <a href="{% url 'create_patient_file' %}" class="btn btn-primary w-100">
+                            <i class="fas fa-plus me-2"></i>Create File
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Column for Latest Images and Patients List -->
+            <div class="col-md-9">
+
+                <div class="card card-owned-projects mb-4">
+                    <div class="card-body">
+                        <h4 class="card-title mb-2">Recent Scans</h4>
+                        <div class="container text-center">
+                            <div class="row">
+                                {% for upload in uploads %}
+                                <div class="col px-1 py-1 border rounded shadow-sm d-flex flex-column justify-content-between align-items-center"
+                                     style="height: 300px; margin: 5px">
+                                    <!-- Center the image -->
+                                    <div class="d-flex justify-content-center align-items-center mt-3" style="width: 100%; height: 225px;">
+                                        <img src="{% url 'secure_patient_image' upload.patient.id upload.file_name %}"
+                                             alt="Scan {{ forloop.counter }}"
+                                             class="img-fluid rounded"
+                                             style="max-height: 100%; object-fit: contain;">
+                                    </div>
+                                    <p class="mt-auto text-muted fs-6">Scanned: {{ upload.uploaded_at|date:"F j, Y, g:i a" }}</p>
+                                </div>
+                                {% endfor %}
+                                {% if uploads|length == 0 %}
+                                <p class="text-muted mt-3">No recent scans available.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+        </div>
+    </div>
+
 </div>
+<style>
+    /* Add subtle shadows to cards */
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Blue edge for Create New Patient File */
+    .card-create-patient-file {
+        border-left: 4px solid #007bff; /* Bootstrap primary blue */
+    }
+
+    /* Teal edge for card-view-patients */
+    .card-view-patients {
+        border-left: 4px solid #17a2b8; /* Bootstrap teal */
+    }
+
+    /* bg-info edge for card-scan-image */
+    .card-scan-image {
+        border-left: 4px solid #0dcaf0; /* Bootstrap 'info' color */
+    }
+
+    /* Section headers */
+    .card-title {
+        font-size: 1.25rem;
+    }
+
+    #viewPatientsBtn {
+        background: #17a2b8;
+        color: white;
+        box-shadow: none;
+        transition: background 0.3s ease-in-out;
+        border: #17a2b8;
+    }
+
+    #viewPatientsBtn:hover {
+        background: #138496; /* Darker shade on hover */
+        color: white;
+    }
+</style>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container mt-4 mb-5">
 
-    <h2 class="text-primary text-center fw-bold mb-5">Upload New Scan for Tumor Prediction</h2>
+    <h1 class="mb-5">Upload New Scan for Tumor Prediction</h1>
 
     <div class="row justify-content-around border rounded shadow-sm p-4">
 
@@ -13,9 +13,9 @@
 
             <div id="upload-section-title" class="text-center mb-3">
                 {% if scanned_file_url %}
-                    <h4 class="text-primary">Image Scanned:</h4>
+                    <h4 class="text-dark">Image Scanned:</h4>
                 {% else %}
-                    <h4 class="text-primary">Choose Image to Scan:</h4>
+                    <h4 class="text-dark">Choose Image to Scan:</h4>
                 {% endif %}
             </div>
 
@@ -28,7 +28,7 @@
 
             <!-- File Upload Form -->
             {% if scanned_file_url %}
-                <h4 class="text-center text-primary mb-3 mt-3">Upload & Scan Another Image:</h4>
+                <h4 class="text-center text-dark mb-3 mt-3">Upload & Scan Another Image:</h4>
             {% endif %}
             <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
                 <form method="POST" enctype="multipart/form-data">
@@ -48,12 +48,12 @@
         <div class="col-sm-5 d-flex flex-column align-items-center">
 
             <div id="result-section-title" class="text-center mb-3">
-                <h4 class="text-primary">Prediction Results</h4>
+                <h4 class="text-dark">Prediction Results:</h4>
             </div>
 
             <!-- Results -->
             {% if result %}
-                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
+                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center border rounded shadow-sm mb-4" style="width: 450px; height: 350px;">
                     <h5 class="text-primary text-center mb-2">{{ result }}</h5>
                     <ul class="list-unstyled">
                         {% if result == "Brain Tumor Detected" %}
@@ -108,12 +108,14 @@
                     {% endif %}
                 </div>
             {% else %}
-                <p class="text-muted text-center">There are no predictions to display.</p>
+                <div class="px-4 py-4 d-flex align-items-center justify-content-center">
+                    <p class="text-muted text-center">There are no predictions to display.</p>
+                </div>
             {% endif %}
 
             <!-- Assignment Form -->
             {% if result %}
-                <h4 class="text-primary mb-3 mt-3">Assign Scan to Patient:</h4>
+                <h4 class="text-dark mb-3 mt-3">Assign Scan to Patient:</h4>
                 <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
                     <form id="result-assignment-form" method="post">
                         {% csrf_token %}

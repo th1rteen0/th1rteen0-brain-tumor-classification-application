@@ -4,12 +4,12 @@
 {% block content %}
 <div class="container mt-4 mb-5">
     <!-- Title Section with Back Button -->
-    <div class="d-flex align-items-center mb-5" style="position: relative;">
-        <a href="{% url 'patient_file' patient.id %}" class="text-decoration-none text-primary d-flex align-items-center" style="position: absolute; left: 0;">
-            <i class="bi bi-arrow-left" style="fot-size: 1.5rem;"></i>
-            <span class="ms-2 fw-bold">Back</span>
+    <div class="d-flex align-items-center justify-content-center mb-5" style="position: relative;">
+        <a href="{% url 'patient_file' patient.id %}" class="text-decoration-none d-flex align-items-center text-dark" style="position: absolute; left: 0;">
+            <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
+            <span class="ms-2">Back</span>
         </a>
-        <h2 class="text-primary text-center fw-bold w-100 m-0">{{ patient }}'s Scans</h2>
+        <h2 class="text-center w-100 m-0">{{ patient }}'s Scans</h2>
     </div>
 
     <!-- Scans Table -->
@@ -44,8 +44,13 @@
                             </td>
                         {% endif %}
                         <td>
-                            <!-- View Details button -->
-                            <button type="button" class="btn btn-info btn-sm px-3 shadow-sm" onclick="toggleDetails(this)">View Details</button>
+                            <!-- View Details and Delete Button -->
+                            <button type="button" class="btn btn-info btn-sm px-3 shadow-sm" onclick="toggleDetails(this)" >View Details</button>
+                            <a href="{% url 'delete_file' patient.id upload.id %}">
+                                <button type="button" class="btn btn-danger btn-sm px-3 shadow-sm" onclick="return confirm('Are you sure you want to delete this file?');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </a>
                         </td>
                     </tr>
 

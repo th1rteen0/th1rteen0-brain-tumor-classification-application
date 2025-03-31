@@ -2,6 +2,177 @@
 
 {% block content %}
 <div id="note-section" class="note-section">
+    {% if notes and latest_scan %}
+    <!--Notes and scan are available-->
+    <div id="notes-content" style="height: 400px;">
+        <!-- Display Notes -->
+        <div id="notes-container" class="notes-container border rounded shadow-sm p-2" style="overflow-y: auto; height: 100%; max-height: 400px;">
+            {% for note in notes %}
+            <div id="note-{{ note.id }}" class="card mb-3 border border-1 shadow-sm">
+                <!-- Note Body -->
+                <div class="card-body">
+                    <p class="card-text">{{ note.content }}</p>
+                </div>
+                <!-- Note Footer -->
+                <div class="card-footer d-flex justify-content-between align-items-center bg-white">
+                    <small class="text-muted">{{ note.created_at|date:"F j, Y, g:i a" }}</small>
+                    <div class="ms-auto d-flex gap-2">
+                        <button class="btn btn-warning btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editNoteModal-{{ note.id }}">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <form method="post" action="{% url 'delete_note' note.id %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm d-flex align-items-center gap-1" onclick="return confirm('Are you sure you want to delete this note?');">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Edit Note Modal -->
+            <div class="modal fade" id="editNoteModal-{{ note.id }}" tabindex="-1" aria-labelledby="editNoteModalLabel-{{ note.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-primary" id="editNoteModalLabel-{{ note.id }}">Edit Note</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="edit-note-form-{{ note.id }}" method="post" action="{% url 'edit_note' note.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-floating mb-3">
+                                    <textarea name="content" class="form-control" id="editNoteContent-{{ note.id }}" style="height: 100px;">{{ note.content }}</textarea>
+                                    <label for="editNoteContent-{{ note.id }}">Edit your note...</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <p class="text-muted text-center mb-0">No notes available for this patient's file.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% elif notes %}
+    <!--Notes are available, but no scan.-->
+    <div id="notes-content">
+        <!-- Display Notes -->
+        <div id="notes-container" class="notes-container border rounded shadow-sm p-2" style="overflow-y: auto; max-height: 400px;">
+            {% for note in notes %}
+            <div id="note-{{ note.id }}" class="card mb-3 border border-1 shadow-sm">
+                <!-- Note Body -->
+                <div class="card-body">
+                    <p class="card-text">{{ note.content }}</p>
+                </div>
+                <!-- Note Footer -->
+                <div class="card-footer d-flex justify-content-between align-items-center bg-white">
+                    <small class="text-muted">{{ note.created_at|date:"F j, Y, g:i a" }}</small>
+                    <div class="ms-auto d-flex gap-2">
+                        <button class="btn btn-warning btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editNoteModal-{{ note.id }}">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <form method="post" action="{% url 'delete_note' note.id %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm d-flex align-items-center gap-1" onclick="return confirm('Are you sure you want to delete this note?');">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Edit Note Modal -->
+            <div class="modal fade" id="editNoteModal-{{ note.id }}" tabindex="-1" aria-labelledby="editNoteModalLabel-{{ note.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-primary" id="editNoteModalLabel-{{ note.id }}">Edit Note</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="edit-note-form-{{ note.id }}" method="post" action="{% url 'edit_note' note.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-floating mb-3">
+                                    <textarea name="content" class="form-control" id="editNoteContent-{{ note.id }}" style="height: 100px;">{{ note.content }}</textarea>
+                                    <label for="editNoteContent-{{ note.id }}">Edit your note...</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% elif latest_scan %}
+    <!--Scan is available, but no notes.-->
+    <div id="notes-content" style="height: 400px;">
+        <!-- Display Notes -->
+        <div id="notes-container" class="notes-container border rounded shadow-sm p-2 d-flex justify-content-center align-items-center" style="overflow-y: auto; height: 100%; max-height: 400px;">
+            {% for note in notes %}
+            <div id="note-{{ note.id }}" class="card mb-3 border border-1 shadow-sm">
+                <!-- Note Body -->
+                <div class="card-body">
+                    <p class="card-text">{{ note.content }}</p>
+                </div>
+                <!-- Note Footer -->
+                <div class="card-footer d-flex justify-content-between align-items-center bg-white">
+                    <small class="text-muted">{{ note.created_at|date:"F j, Y, g:i a" }}</small>
+                    <div class="ms-auto d-flex gap-2">
+                        <button class="btn btn-warning btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editNoteModal-{{ note.id }}">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <form method="post" action="{% url 'delete_note' note.id %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm d-flex align-items-center gap-1" onclick="return confirm('Are you sure you want to delete this note?');">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Edit Note Modal -->
+            <div class="modal fade" id="editNoteModal-{{ note.id }}" tabindex="-1" aria-labelledby="editNoteModalLabel-{{ note.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-primary" id="editNoteModalLabel-{{ note.id }}">Edit Note</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="edit-note-form-{{ note.id }}" method="post" action="{% url 'edit_note' note.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-floating mb-3">
+                                    <textarea name="content" class="form-control" id="editNoteContent-{{ note.id }}" style="height: 100px;">{{ note.content }}</textarea>
+                                    <label for="editNoteContent-{{ note.id }}">Edit your note...</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <p class="text-muted text-center mb-0">No notes available for this patient's file.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <!--No notes or scan available.-->
     <div id="notes-content">
         <!-- Display Notes -->
         <div id="notes-container" class="notes-container border rounded shadow-sm p-2" style="overflow-y: auto; max-height: 400px;">
@@ -56,6 +227,8 @@
             {% endfor %}
         </div>
     </div>
+
+    {% endif %}
 
     <!-- Add Note Form -->
     <div id="add-note-form-section" class="mt-4 p-3 rounded border border-1 bg-white shadow-sm">
