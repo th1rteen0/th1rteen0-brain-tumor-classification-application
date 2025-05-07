@@ -29,10 +29,15 @@ from django.urls import reverse
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.utils import timezone
+from functools import lru_cache
 
+@lru_cache(maxsize=1)
+def get_binary_model():
+    return load_model('models/binary_model.keras')
 
-binary_model = load_model('models/binary_model.keras')
-tumor_model = load_model('models/multi_class_braintumormodel.keras')
+@lru_cache(maxsize=1)
+def get_tumor_model():
+    return load_model('models/multi_class_braintumormodel.keras')
 
 
 def dashboard(request):
@@ -135,6 +140,8 @@ def process_scan(scan_file):
 
 
 def detect_tumor(image):
+    model = get_tumor_model()
+
     tumor_confidence, no_tumor_confidence = predict_tumor(image)
 
     if tumor_confidence >= 0.5:
@@ -151,7 +158,7 @@ def detect_tumor(image):
         tumor_types = ["Glioma", "Meningioma", "Pituitary"]
         for i, t in enumerate(tumor_types):
             if t != tumor_type:
-                other_tumor_confidence = tumor_model.predict(preprocess_image(image))[0][i] * 100
+                other_tumor_confidence = model.predict(preprocess_image(image))[0][i] * 100
                 tumor_results.append({
                     'type': t,
                     'confidence': f"{other_tumor_confidence:.2f}%",
@@ -169,7 +176,7 @@ def detect_tumor(image):
 
         # Display the confidence for possible tumor types (in case it wasn't detected as a tumor)
         tumor_types = ["Glioma", "Meningioma", "Pituitary"]
-        tumor_predictions = tumor_model.predict(preprocess_image(image))[0]
+        tumor_predictions = model.predict(preprocess_image(image))[0]
 
         tumor_results = [{
             'type': t,
@@ -185,7 +192,8 @@ def predict_tumor(image):
     img = preprocess_image(image)
 
     # Get the model's prediction (output will be between 0 and 1)
-    prediction = binary_model.predict(img)
+    model = get_binary_model()
+    prediction = model.predict(img)
 
     # The model's confidence for the tumor class (class 1)
     tumor_confidence = prediction[0][0]  # Since it's a single output, get the first element
@@ -251,7 +259,8 @@ def classify_tumor_type(image):
     img = preprocess_image(image)
 
     # Get the tumor type prediction
-    prediction = tumor_model.predict(img)
+    model = get_tumor_model()
+    prediction = model.predict(img)
     tumor_types = ["Glioma", "Meningioma", "Pituitary"]  # Example classes
 
     # Get the index of the highest confidence (softmax output)
