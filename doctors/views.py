@@ -37,12 +37,22 @@ import imutils
 
 @lru_cache(maxsize=1)
 def get_binary_model():
-    return load_model('models/binary_model.keras')
+    path = 'models/binary_model.keras'
+    if not os.path.exists(path):
+        os.makedirs('models', exist_ok=True)
+        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+        s3.download_file(AWS_STORAGE_BUCKET_NAME, 'models/b_model.keras', path)
+    return load_model(path)
 
 
 @lru_cache(maxsize=1)
 def get_tumor_model():
-    return load_model('models/multi_model.keras')
+    path = 'models/multi_model.keras'
+    if not os.path.exists(path):
+        os.makedirs('models', exist_ok=True)
+        s3 = boto3.client('s3', region_name=AWS_S3_REGION_NAME)
+        s3.download_file(AWS_STORAGE_BUCKET_NAME, 'models/m_model.keras', path)
+    return load_model(path)
 
 
 # =========================

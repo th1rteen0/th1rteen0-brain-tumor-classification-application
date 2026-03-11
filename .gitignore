@@ -8,3 +8,4 @@ myenv
 db.sqlite3
 media/
 .DS_Store
+models/
