@@ -19,17 +19,40 @@
                 {% endif %}
             </div>
 
-            <!-- Display the Uploaded Scan -->
             {% if scanned_file_url %}
-                <div id="upload-section-image" class="px-4 py-4 w-100 bg-white d-flex align-items-center justify-content-center mb-4" style="width: 450px; height: 350px;">
+                <!-- Original -->
+                <div id="view-original" class="scan-view active-view px-4 py-4 w-100 bg-white align-items-center justify-content-center mb-2" style="height: 350px;">
                     <img src="{{ scanned_file_url }}" alt="Uploaded Scan" class="img-fluid rounded shadow-sm" style="max-width: 425px; max-height: 325px;">
                 </div>
+
+                {% if gradcam_b64 %}
+                    <!-- Grad-CAM -->
+                    <div id="view-gradcam" class="scan-view px-4 py-4 w-100 bg-white align-items-center justify-content-center mb-2" style="height: 350px;">
+                        <img src="{{ gradcam_b64 }}" alt="Grad-CAM Heatmap" class="img-fluid rounded shadow-sm" style="max-width: 425px; max-height: 325px;">
+                    </div>
+
+                    <!-- Compare -->
+                    <div id="view-compare" class="scan-view px-2 py-4 w-100 bg-white align-items-center justify-content-center mb-2" style="height: 350px; gap: 1rem;">
+                        <div class="text-center">
+                            <p class="small text-muted mb-1">Original</p>
+                            <img src="{{ scanned_file_url }}" alt="Original" class="img-fluid rounded shadow-sm" style="max-width: 200px; max-height: 280px;">
+                        </div>
+                        <div class="text-center">
+                            <p class="small text-muted mb-1">Grad-CAM</p>
+                            <img src="{{ gradcam_b64 }}" alt="Grad-CAM" class="img-fluid rounded shadow-sm" style="max-width: 200px; max-height: 280px;">
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="btn-group mb-3" role="group">
+                        <button type="button" class="btn btn-outline-primary active" onclick="showView('original', this)">Original</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="showView('gradcam', this)">Grad-CAM</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="showView('compare', this)">Compare</button>
+                    </div>
+                {% endif %}
             {% endif %}
 
             <!-- File Upload Form -->
-            {% if scanned_file_url %}
-                <h4 class="text-center text-dark mb-3 mt-3">Upload & Scan Another Image:</h4>
-            {% endif %}
             <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
@@ -38,83 +61,52 @@
                         <input type="file" class="form-control" name="scanned_file" id="scanned_file" accept="image/*,application/dicom">
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-block">Upload and Predict</button>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            {% if scanned_file_url %}Upload & Scan Another Image{% else %}Upload and Predict{% endif %}
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Results (Prediction and Assignment) Section -->
+        <!-- Results Section -->
         <div class="col-sm-5 d-flex flex-column align-items-center">
 
-            <div id="result-section-title" class="text-center mb-3">
+            <div class="text-center mb-3">
                 <h4 class="text-dark">Prediction Results:</h4>
             </div>
 
-            <!-- Results -->
             {% if result %}
-                <div id="result-section-information" class="d-flex flex-column align-items-center justify-content-center border rounded shadow-sm mb-4" style="width: 450px; height: 350px;">
+                <div class="d-flex flex-column align-items-center justify-content-center border rounded shadow-sm mb-4" style="width: 450px; height: 350px;">
                     <h5 class="text-primary text-center mb-2">{{ result }}</h5>
                     <ul class="list-unstyled">
                         {% if result == "Brain Tumor Detected" %}
-                            <li>
-                                <strong>Tumor Detection Confidence: {{ result_confidence }}</strong>
-                            </li>
-                            <li>
-                                Tumor Absence Confidence: {{ other_confidence }}
-                            </li>
+                            <li><strong>Tumor Detection Confidence: {{ result_confidence }}</strong></li>
+                            <li>Tumor Absence Confidence: {{ other_confidence }}</li>
                         {% else %}
-                            <li>
-                                <strong>Tumor Absence Confidence: {{ result_confidence }}</strong>
-                            </li>
-                            <li>
-                                Tumor Detection Confidence: {{ other_confidence }}
-                            </li>
+                            <!-- if result == No Brain Tumor Detected -->
+                            <li><strong>Tumor Absence Confidence: {{ result_confidence }}</strong></li>
+                            <li>Tumor Detection Confidence: {{ other_confidence }}</li>
                         {% endif %}
                     </ul>
 
                     {% if tumor_results %}
-                        {% if result == "Brain Tumor Detected" %}
-                        <h5 class="text-primary mt-4">Possible Tumor Types:</h5>
-                            <ul class="list-unstyled">
-                                {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
-                                    {% for tumor in tumor_results %}
-                                        <li>
-                                            {% if tumor == highest_confidence %}
-                                                <strong>{{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span></strong>
-                                            {% else %}
-                                                {{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                {% endwith %}
-                            </ul>
-                        {% else %}
-                            <h5 class="text-primary text-center mt-4">Potential Tumor Types Based on the Detection Confidence of {{ other_confidence }}:</h5>
-                            <ul class="list-unstyled">
-                                {% with tumor_results|dictsort:"confidence"|last as highest_confidence %}
-                                    {% for tumor in tumor_results %}
-                                        <li>
-                                            {% if tumor == highest_confidence %}
-                                                <strong>{{ tumor.type }}: <span class="text-secondary">{{ tumor.confidence }}</span></strong>
-                                            {% else %}
-                                                {{ tumor.type }}: <span class="text-secondary">{{ tumor.confidence }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                {% endwith %}
-                            </ul>
-                        {% endif %}
+                        <h5 class="text-primary mt-3">Predicted Tumor Types:</h5>
+                        <ul class="list-unstyled">
+                            {% for tumor in tumor_results %}
+                                <li>
+                                    {% if forloop.first %}
+                                        <strong>{{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span></strong>
+                                    {% else %}
+                                        {{ tumor.type }}: <span class="text-success">{{ tumor.confidence }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
                     {% endif %}
                 </div>
-            {% else %}
-                <div class="px-4 py-4 d-flex align-items-center justify-content-center">
-                    <p class="text-muted text-center">There are no predictions to display.</p>
-                </div>
-            {% endif %}
 
-            <!-- Assignment Form -->
-            {% if result %}
+                <!-- Assignment Form -->
                 <h4 class="text-dark mb-3 mt-3">Assign Scan to Patient:</h4>
                 <div class="px-4 py-4 border rounded w-100 bg-white shadow-sm">
                     <form id="result-assignment-form" method="post">
@@ -124,6 +116,7 @@
                         <input type="hidden" name="result_confidence" value="{{ result_confidence }}">
                         <input type="hidden" name="other_confidence" value="{{ other_confidence }}">
                         <input type="hidden" name="tumor_results" value="{{ tumor_results }}">
+                        <input type="hidden" name="gradcam_b64" value="{{ gradcam_b64 }}">
 
                         <div class="form-group mb-3">
                             <label for="patient_id" class="form-label fw-bold">Select patient:</label>
@@ -139,15 +132,31 @@
                         </div>
                     </form>
                 </div>
+
+            {% else %}
+                <div class="px-4 py-4 d-flex align-items-center justify-content-center">
+                    <p class="text-muted text-center">There are no predictions to display.</p>
+                </div>
             {% endif %}
 
         </div>
 
     </div>
-
 </div>
 
+<style>
+    .scan-view { display: none; }
+    .scan-view.active-view { display: flex; }
+</style>
+
 <script>
+    function showView(view, btn) {
+        document.querySelectorAll('.scan-view').forEach(el => el.classList.remove('active-view'));
+        document.getElementById('view-' + view).classList.add('active-view');
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
     $(document).ready(function() {
         $('#patient-dropdown').select2({
             placeholder: "Search for a patient",
@@ -155,6 +164,4 @@
         });
     });
 </script>
-
-
 {% endblock %}

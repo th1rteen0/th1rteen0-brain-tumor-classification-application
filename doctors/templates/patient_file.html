@@ -12,64 +12,99 @@
         <h2 class="text-center w-100 m-0">{{ patient }}'s File</h2>
     </div>
 
-
     <div class="row justify-content-around rounded border shadow-sm p-4">
 
-        <!-- Most Recent Scan (Image) Section with Predictions -->
+        <!-- Most Recent Scan Section -->
         <div class="col-sm-5 d-flex flex-column border-end border-1 pe-4">
             <h3 class="mb-4">Most Recent Scan</h3>
 
-            <div class="d-flex flex-column justify-content-center align-items-center" style="height: 100%;">
+            <div class="d-flex flex-column justify-content-center align-items-center">
 
-                <!-- Image Section-->
-                <div class="d-flex align-items-center justify-content-center mb-4">
-                    {% if latest_scan %}
-                    <div style="width: 100%; height: 300px;">
-                        <img class="img-fluid rounded shadow-sm mb-4"
+                {% if latest_scan %}
+
+                    <!-- Original -->
+                    <div id="patient-view-original" class="patient-scan-view mb-4" style="width: 100%; height: 280px; display: flex; align-items: center; justify-content: center;">
+                        <img class="img-fluid rounded shadow-sm"
                              src="{% url 'secure_patient_image' patient.id latest_scan.file_name %}"
                              alt="Latest scan"
                              style="max-width: 100%; max-height: 100%;">
                     </div>
-                    {% else %}
-                        <p class="text-muted fw-light">No recent scan available.</p>
-                    {% endif %}
-                </div>
 
-                {% if latest_scan %}
-                <!-- Prediction Section -->
-                <div class="border border-1 rounded p-3 bg-white shadow-sm mb-4">
-                    <h4 class="text-success mb-3">Prediction Results</h4>
-                    {% if latest_scan.prediction %}
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="fw-bold mb-1">{{ latest_scan.prediction.0 }}</p>
-                            <ul class="text-muted">
-                                {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
-                                    <li>Detection Confidence: {{ latest_scan.prediction.1 }}</li>
-                                    <li>No Tumor Confidence: {{ latest_scan.prediction.2 }} </li>
-                                {% else %}
-                                    <li>No Tumor Confidence: {{ latest_scan.prediction.1 }}</li>
-                                    <li>Tumor Detection Confidence: {{ latest_scan.prediction.2 }}</li>
-                                {% endif %}
-                            </ul>
+                    {% if latest_scan.gradcam_b64 %}
+                        <!-- Grad-CAM -->
+                        <div id="patient-view-gradcam" class="patient-scan-view mb-4" style="width: 100%; height: 280px; display: none; align-items: center; justify-content: center;">
+                            <img class="img-fluid rounded shadow-sm"
+                                 src="{{ latest_scan.gradcam_b64 }}"
+                                 alt="Grad-CAM"
+                                 style="max-width: 100%; max-height: 100%;">
                         </div>
-                        <div class="col-md-6">
-                            <p class="fw-bold mb-1">Possible Tumor Types:</p>
-                            {% if formatted_tumor_results %}
-                                <ul class="text-muted">
-                                    {% for each in formatted_tumor_results %}
-                                        <li>{{ each }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
+
+                        <!-- Compare -->
+                        <div id="patient-view-compare" class="patient-scan-view mb-4" style="width: 100%; height: 280px; display: none; align-items: center; justify-content: center; gap: 1rem;">
+                            <div class="text-center">
+                                <p class="small text-muted mb-1">Original</p>
+                                <img class="img-fluid rounded shadow-sm"
+                                     src="{% url 'secure_patient_image' patient.id latest_scan.file_name %}"
+                                     alt="Original"
+                                     style="max-width: 130px; max-height: 240px;">
+                            </div>
+                            <div class="text-center">
+                                <p class="small text-muted mb-1">Grad-CAM</p>
+                                <img class="img-fluid rounded shadow-sm"
+                                     src="{{ latest_scan.gradcam_b64 }}"
+                                     alt="Grad-CAM"
+                                     style="max-width: 130px; max-height: 240px;">
+                            </div>
                         </div>
-                    </div>
-                    {% else %}
-                    <div class="row">
-                        <p class="text-muted">No predictions available.</p>
-                    </div>
                     {% endif %}
-                </div>
+
+                    {% if latest_scan.gradcam_b64 %}
+                        <div class="btn-group mb-4" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm active" onclick="showPatientView('original', this)">Original</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="showPatientView('gradcam', this)">Grad-CAM</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="showPatientView('compare', this)">Compare</button>
+                        </div>
+                    {% endif %}
+
+                    <!-- Prediction Section -->
+                    <div class="border border-1 rounded p-3 bg-white shadow-sm mb-4 w-100">
+                        <h4 class="text-success mb-3">Prediction Results</h4>
+                        {% if latest_scan.prediction %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="fw-bold mb-1">{{ latest_scan.prediction.0 }}</p>
+                                <ul class="text-muted">
+                                    {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
+                                        <li>Detection Confidence: {{ latest_scan.prediction.1 }}</li>
+                                        <li>No Tumor Confidence: {{ latest_scan.prediction.2 }}</li>
+                                    {% else %}
+                                        <li>No Tumor Confidence: {{ latest_scan.prediction.1 }}</li>
+                                        <li>Tumor Detection Confidence: {{ latest_scan.prediction.2 }}</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                {% if latest_scan.prediction.0 == "Brain Tumor Detected" %}
+                                    <p class="fw-bold mb-1">Possible Tumor Types:</p>
+                                {% else %}
+                                    <p class="fw-bold mb-1 text-warning">Type Scores (Safety Ref):</p>
+                                {% endif %}
+                                {% if formatted_tumor_results %}
+                                    <ul class="text-muted">
+                                        {% for each in formatted_tumor_results %}
+                                            <li>{{ each }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                            <p class="text-muted">No predictions available.</p>
+                        {% endif %}
+                    </div>
+
+                {% else %}
+                    <p class="text-muted fw-light">No recent scan available.</p>
                 {% endif %}
 
             </div>
@@ -90,9 +125,7 @@
 
         <!-- Patient Information Section -->
         <div class="col-sm-3 d-flex flex-column">
-            <!-- Header -->
             <h3 class="mb-4">Patient Information</h3>
-            <!--Information Container -->
             <div class="px-4 py-4 border rounded bg-white shadow-sm" style="height: 100%;">
                 <ul class="list-unstyled text-muted">
                     <li class="mb-3">
@@ -112,9 +145,9 @@
                     </li>
                 </ul>
             </div>
-            <!-- Edit Patient Information Button -->
             <button class="btn btn-primary w-100 mt-4" data-bs-toggle="modal" data-bs-target="#editPatientModal">Edit Information</button>
-            <!-- Edit Patient Information Modal -->
+
+            <!-- Edit Patient Modal -->
             <div class="modal fade" id="editPatientModal" tabindex="-1" aria-labelledby="editPatientModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -142,7 +175,7 @@
                                     <input type="text" class="form-control" id="phone" name="phone_number" value="{{ patient.phone_number }}" required>
                                 </div>
                                 <div class="mb-3">
-                                    <lfabel for="address" class="form-label">Address</lfabel>
+                                    <label for="address" class="form-label">Address</label>
                                     <input type="text" class="form-control" id="address" name="address" value="{{ patient.address }}" required>
                                 </div>
                             </div>
@@ -161,10 +194,14 @@
             </div>
         </div>
     </div>
-
 </div>
-{% endblock %}
 
 <script>
-
+    function showPatientView(view, btn) {
+        document.querySelectorAll('.patient-scan-view').forEach(el => el.style.display = 'none');
+        document.getElementById('patient-view-' + view).style.display = 'flex';
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
 </script>
+{% endblock %}

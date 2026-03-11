@@ -32,6 +32,7 @@ class Upload(models.Model):
     # prediction = models.CharField(max_length=255, null=True, blank=True)
     prediction = ArrayField(models.CharField(max_length=200), blank=True)
     # stored as [result, result_confidence, other_confidence, tumor_results]
+    gradcam_b64 = models.TextField(null=True, blank=True)
 
     class Meta:
         constraints = [
