@@ -28,9 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SUPER_SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ['th1rteen0-brain-tumor-classification-vm7a.onrender.com', '127.0.0.1']
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = ['th1rteen0-brain-tumor-classification-vm7a.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
