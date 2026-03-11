@@ -3,7 +3,7 @@ services:
     name: brain-tumor-app
     runtime: python
     pythonVersion: "3.11.13"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput
     startCommand: gunicorn mysite.wsgi:application --workers 1 --timeout 120
     envVars:
       - key: AWS_STORAGE_BUCKET_NAME
