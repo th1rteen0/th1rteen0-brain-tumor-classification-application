@@ -2,8 +2,17 @@ services:
   - type: web
     name: brain-tumor-app
     runtime: python
+    pythonVersion: "3.11.13"
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn mysite.wsgi:application
+    startCommand: gunicorn mysite.wsgi:application --workers 1 --timeout 120
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_REGION_NAME
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
