@@ -117,9 +117,13 @@ python manage.py migrate
 ```
 
 6. **Place model files**
-
-   Download the trained model `.keras` files from the [notebooks repo](https://github.com/th1rteen0/brain-tumor-classification-models) and
-   place them in the `models/` directory:
+ 
+   > **Note on model storage:**
+   > For **local development and testing**, download the `.keras` model files from the
+   > [notebooks repo](https://github.com/th1rteen0/brain-tumor-classification-models)
+   > and place them in the `models/` directory as shown below. For **production deployment**,
+   > the models are loaded directly from Amazon S3.
+ 
 ```
 models/
 ├── binary_model.keras
