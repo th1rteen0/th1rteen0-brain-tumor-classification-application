@@ -71,8 +71,8 @@ code, preprocessing steps, and evaluation metrics.
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-username/brain-tumor-app.git
-cd brain-tumor-app
+git clone https://github.com/th1rteen0/brain-tumor-classification-application.git
+cd brain-tumor-classification-application
 ```
 
 2. **Create and activate a virtual environment**
@@ -139,7 +139,7 @@ python manage.py runserver
 
 ## Project Structure
 ```
-brain-tumor-app/
+brain-tumor-classification-application/
 ├── doctors/               # Main Django app (patients, scans, classification logic)
 │   ├── migrations/        # Database migration files
 │   ├── templates/         # HTML templates
